@@ -4,7 +4,7 @@ personal project by juli. explored how language models (LLMs) solve reasoning pr
 
 ## What This Does
 
-Instead of treating models as black boxes, we systematically break them down into parts:
+Instead of treating models as black boxes, I systematically break them down into parts:
 1. Test baseline accuracy on math and logic problems
 2. Zero out attention heads one at a time and measure performance drops
 3. Identify which heads matter most
@@ -97,6 +97,26 @@ Test different model:
 ```bash
 python -m src.experiment_lite --model distilgpt2 --dataset arithmetic --output results/distil
 ```
+
+## What I Found From My Experiments
+
+Small language models (GPT-2, DistilGPT2) fail at basic reasoning tasks because they're trained to predict the next word, not solve math or logic problems. 
+
+**The Results**
+- Arithmetic: 0% accuracy (models just hallucinate numbers)
+- Logic: 50% on simple deduction, then fails on harder problems
+- GSM8K: 0% accuracy (too complex for models never trained on reasoning)
+
+When I turned off individual attention heads, nothing changed the 0% baseline. This revealed that the models lack the fundamental capability to reason, not just weak components. No single head is responsible, since the whole architecture wasn't designed for this task.
+
+Hallucination is the dominant failure mode (75-100% of errors). The models confidently generate plausible-sounding but completely wrong answers instead of saying "I don't know." This happened the same way in both GPT-2 and DistilGPT2, showing it's a property of how these models work, not a size issue.
+
+**What This Means**
+- Small models fail at reasoning consistently, independent of architecture tweaks
+- To solve reasoning, you need models trained on step-by-step solutions (like Mistral or LLaMA trained on math)
+- Only having more parameters doesn't help—training data and methodology matter more
+
+In conclusion, I found why and how small models fail at math.
 
 View results:
 ```bash
