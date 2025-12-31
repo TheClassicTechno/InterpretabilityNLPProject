@@ -122,3 +122,15 @@ View results:
 ```bash
 python inspect_results.py results/test/results.json
 ```
+
+## Common Questions and Answers
+
+**Q1: Why did GPT-2 get 0% accuracy on math problems?**
+
+Answer:
+GPT-2 was trained to predict the next word in text, not to actually calculate or reason. When you ask "What is 5 + 3?", it doesn't calculate, it just tries to predict what word usually comes after that question based on patterns it saw during training. Since it wasn't trained on step-by-step math solutions, it fails completely and just "hallucinates" plausible-sounding numbers. 
+
+
+**Q2: What did we learn about how these models fail?**
+Answer:
+The dominant failure mode is hallucination; the models confidently generate completely wrong answers 75-100% of the time. They don't say "I don't know" or give partially correct answers. Instead, they produce convincing-sounding but entirely incorrect responses. This happened consistently across both GPT-2 and DistilGPT2, showing it's not about model size but about how these models fundamentally work. They're pattern-matching text predictors, not good at logical reasoning.
