@@ -1,0 +1,41 @@
+{
+  "model_name": "gpt2",
+  "dataset_type": "multistep",
+  "num_samples": 5,
+  "baseline_accuracy": 0.2,
+  "model_params_millions": 124.4,
+  "num_layers": 12,
+  "num_heads": 12,
+  "failure_analysis": {
+    "total": 5,
+    "correct_count": 1,
+    "incorrect_count": 4,
+    "accuracy": 0.2
+  },
+  "error_patterns": {
+    "off_by_one": 0,
+    "wrong_operation": 0,
+    "incomplete_reasoning": 0,
+    "hallucination": 4
+  },
+  "examples": {
+    "correct": [
+      {
+        "question": "If I have 5 apples and get 3 more, how many do I have? Answer:",
+        "answer": "8"
+      }
+    ],
+    "incorrect": [
+      {
+        "question": "Alice has 10 dollars. She spends 4 dollars. How much is left? Answer:",
+        "answer": "6",
+        "response": "Alice has 10 dollars. She spends 4 dollars. How much is left? Answer: $10.00.\n\nThe next day, she goes to the bank and asks for a check. She says she has $10.00 in her account. She says she has $10.00 in her account. She says she has"
+      },
+      {
+        "question": "A book costs 15 dollars and pencil costs 2 dollars. What is the total cost? Answer:",
+        "answer": "17",
+        "response": "A book costs 15 dollars and pencil costs 2 dollars. What is the total cost? Answer: $1,000.00.\n\nThe book is a collection of essays by the author, and is available for purchase at the following locations:\n\nThe Library of Congress\n\nThe Library of Congress is the nation's largest and most comprehensive"
+      }
+    ]
+  }
+}

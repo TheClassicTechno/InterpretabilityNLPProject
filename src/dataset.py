@@ -1,4 +1,124 @@
+import random
 from typing import List, Tuple
+
+
+_INDUCTION_WORD_POOL = [
+    "dog", "cat", "sun", "moon", "tree", "car", "book", "chair", "river", "mountain",
+    "apple", "table", "door", "window", "cloud", "star", "fish", "bird", "house", "road",
+    "king", "queen", "child", "friend", "city", "forest", "island", "garden", "bridge", "castle",
+    "ocean", "desert", "valley", "farmer", "doctor", "teacher", "singer", "painter", "soldier", "sailor",
+    "lion", "tiger", "horse", "sheep", "wolf", "eagle", "snake", "rabbit", "mouse", "bear",
+    "coffee", "bread", "cheese", "sugar", "salt", "water", "milk", "wine", "fire", "stone",
+    "silver", "gold", "iron", "glass", "paper", "cotton", "wood", "sand", "snow", "rain",
+    "music", "dance", "story", "dream", "voice", "light", "shadow", "color", "shape", "sound",
+]
+
+
+def _build_word_pool(tokenizer) -> List[str]:
+    """Keep only words that tokenize to exactly one token when preceded by
+    a space (the standard GPT-2 BPE encoding of a word following a space).
+    This guarantees the induction task's answer is a single, unambiguous
+    token rather than depending on an unverified assumption about the
+    tokenizer's vocabulary."""
+    pool = []
+    for word in _INDUCTION_WORD_POOL:
+        ids = tokenizer.encode(" " + word)
+        if len(ids) == 1:
+            pool.append(word)
+    if len(pool) < 8:
+        raise ValueError(
+            f"Only {len(pool)} words in the induction word pool tokenize to a single "
+            "token for this tokenizer; need at least 8 to build 4-word sequences."
+        )
+    return pool
+
+
+def get_induction_tasks(tokenizer, n: int = 200, seed: int = 0) -> Tuple[List[str], List[str]]:
+    """
+    Programmatically generate an induction/copying task with real
+    baseline headroom (unlike the arithmetic/GSM8K tasks in this repo,
+    which floor at 0% for GPT-2/DistilGPT2).
+
+    Each example has the form:
+        "w1 w2 w3 w4 . w1 w2 w3" -> " w4"
+    where w1..w4 are four distinct words drawn from a pool of words
+    verified to tokenize as a single BPE token. The model must copy the
+    token that followed the first occurrence of the repeated 3-gram
+    "w1 w2 w3" (a minimal induction-head task; see Olsson et al. 2022 on
+    induction heads for the general phenomenon).
+
+    Every generated example is verified via `src.metrics.tokenize_qa` to
+    have a clean token-level prefix boundary between question and answer
+    before being included, since BPE merges are not always prefix-stable
+    across the question/answer boundary.
+
+    Returns (questions, answers), length <= n (examples that fail the
+    tokenization-prefix check are dropped rather than silently kept).
+    """
+    from src.metrics import is_valid_qa
+
+    pool = _build_word_pool(tokenizer)
+    rng = random.Random(seed)
+
+    questions, answers = [], []
+    attempts = 0
+    max_attempts = n * 20
+    while len(questions) < n and attempts < max_attempts:
+        attempts += 1
+        w1, w2, w3, w4 = rng.sample(pool, 4)
+        question = f"{w1} {w2} {w3} {w4} . {w1} {w2} {w3}"
+        answer = f" {w4}"
+        if is_valid_qa(tokenizer, question, answer):
+            questions.append(question)
+            answers.append(answer)
+
+    if len(questions) < n:
+        raise RuntimeError(
+            f"Only generated {len(questions)}/{n} valid induction examples after "
+            f"{max_attempts} attempts."
+        )
+    return questions, answers
+
+
+def get_arithmetic_control_tasks(
+    tokenizer, n: int = 200, seed: int = 0, max_operand: int = 20
+) -> Tuple[List[str], List[str]]:
+    """
+    Programmatically generate an addition task used ONLY as an off-target
+    specificity control (never for head selection): "Q: a+b=" -> " sum".
+    Operands are drawn uniformly from [1, max_operand]. Like
+    `get_induction_tasks`, every example is verified to have a clean
+    token-level question/answer boundary before being included.
+
+    Returns (questions, answers), length <= n.
+    """
+    from src.metrics import is_valid_qa
+
+    rng = random.Random(seed)
+    questions, answers = [], []
+    attempts = 0
+    max_attempts = n * 20
+    seen = set()
+    while len(questions) < n and attempts < max_attempts:
+        attempts += 1
+        a = rng.randint(1, max_operand)
+        b = rng.randint(1, max_operand)
+        if (a, b) in seen:
+            continue
+        question = f"Q: {a}+{b}="
+        answer = f" {a + b}"
+        if is_valid_qa(tokenizer, question, answer):
+            seen.add((a, b))
+            questions.append(question)
+            answers.append(answer)
+
+    if len(questions) < n:
+        raise RuntimeError(
+            f"Only generated {len(questions)}/{n} valid arithmetic-control examples "
+            f"after {max_attempts} attempts (max_operand={max_operand} may be too small "
+            "to produce that many unique pairs)."
+        )
+    return questions, answers
 
 
 class SimpleDataset:

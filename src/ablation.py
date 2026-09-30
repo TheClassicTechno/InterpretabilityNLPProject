@@ -3,177 +3,105 @@ import torch.nn as nn
 from typing import Dict, List, Tuple
 
 
-class HeadAblator:
-    """Ablate attention heads and measure performance impact."""
-    
+def _naive_post_projection_hook(head_idx, num_heads):
+    """Reproduces this repo's original `HeadAblator` intervention: zeroes a
+    head_dim-wide channel slice of the attention block's OUTPUT, i.e. AFTER
+    `c_proj` has linearly mixed all heads together. Kept only so it can be
+    directly compared against the correct pre-projection method (RQ0)."""
+
+    def hook(module, inputs, output):
+        attn_output = output[0].clone()
+        head_dim = attn_output.shape[-1] // num_heads
+        start = head_idx * head_dim
+        end = start + head_dim
+        attn_output[..., start:end] = 0
+        return (attn_output, *output[1:])
+
+    return hook
+
+
+def _head_ablation_pre_hook(head_idx, num_heads):
+    """Correct head ablation: zeroes the head_dim-wide slice of `c_proj`'s
+    INPUT (the concatenated, not-yet-mixed per-head outputs), via a
+    forward pre-hook on `c_proj`. Verified against the installed
+    `transformers` GPT2Attention.forward source: `attn_output` is
+    reshaped/merged across heads and THEN passed to `c_proj`, so
+    `c_proj`'s input has exactly one contiguous head_dim-wide chunk per
+    head, unmixed."""
+
+    def hook(module, inputs):
+        x = inputs[0]
+        head_dim = x.shape[-1] // num_heads
+        start = head_idx * head_dim
+        end = start + head_dim
+        x = x.clone()
+        x[..., start:end] = 0
+        return (x,) + tuple(inputs[1:])
+
+    return hook
+
+
+class ValidatedHeadAblator:
+    """
+    Head ablation with two selectable intervention points, used to test
+    RQ0 (does the ablation implementation change the answer) and to
+    compute full per-head causal-effect vectors for RQ1/RQ2.
+
+    method="naive_post_projection": the original (invalid) intervention.
+    method="head_ablation": the correct, pre-c_proj intervention.
+
+    Only "head_ablation" is used for any causal claim in the paper;
+    "naive_post_projection" is retained solely for the RQ0 comparison.
+    """
+
     def __init__(self, model, tokenizer, device="cpu"):
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
         self.num_layers = model.config.num_hidden_layers
         self.num_heads = model.config.num_attention_heads
-    
-    def zero_out_head(self, layer_idx, head_idx):
-        """Zero out a specific attention head."""
+
+    def _register(self, layer_idx, head_idx, method):
         attn_layer = self.model.transformer.h[layer_idx].attn
-        attn_layer.register_forward_hook(
-            lambda module, input, output: self._hook_zero_head(
-                output, head_idx, self.num_heads
-            )
+        if method == "head_ablation":
+            hook_fn = _head_ablation_pre_hook(head_idx, self.num_heads)
+            return attn_layer.c_proj.register_forward_pre_hook(hook_fn)
+        elif method == "naive_post_projection":
+            hook_fn = _naive_post_projection_hook(head_idx, self.num_heads)
+            return attn_layer.register_forward_hook(hook_fn)
+        else:
+            raise ValueError(f"Unknown ablation method: {method}")
+
+    def compute_all_head_effects(
+        self, questions: List[str], answers: List[str], method: str = "head_ablation"
+    ) -> Tuple[List[float], Dict[Tuple[int, int], List[float]]]:
+        """
+        Computes, for EVERY (layer, head), the per-example teacher-forced
+        log-probability of the gold continuation with that head ablated
+        (one batched forward pass per head -- not per example, so this is
+        cheap: num_layers * num_heads batched calls total).
+
+        Returns (baseline_per_example, effects) where
+        effects[(layer, head)] is a list of per-example ablated log-probs
+        (same order as `questions`/`answers`). Callers compute
+        delta = baseline - ablated as needed.
+        """
+        from src.metrics import logprob_of_continuation_batch
+
+        baseline = logprob_of_continuation_batch(
+            self.model, self.tokenizer, questions, answers, self.device
         )
-    
-    @staticmethod
-    def _hook_zero_head(output, head_idx, num_heads):
-        """Hook to zero out a head in attention output."""
-        attn_output = output[0]
-        head_dim = attn_output.shape[-1] // num_heads
-        start = head_idx * head_dim
-        end = start + head_dim
-        attn_output[..., start:end] = 0
-        return (attn_output, *output[1:])
-    
-    def ablate_head(self, question, answer, layer_idx, head_idx):
-        """
-        Ablate a single head and measure accuracy impact.
-        
-        Args:
-            question: Input question text.
-            answer: Correct answer text.
-            layer_idx: Layer index (0 to num_layers-1).
-            head_idx: Head index (0 to num_heads-1).
-        
-        Returns:
-            Boolean indicating if the answer is correct after ablation.
-        """
-        hooks = []
-        
-        def zero_hook(module, input, output):
-            attn_output = output[0].clone()
-            head_dim = attn_output.shape[-1] // self.num_heads
-            start = head_idx * head_dim
-            end = start + head_dim
-            attn_output[..., start:end] = 0
-            return (attn_output, *output[1:])
-        
-        attn_layer = self.model.transformer.h[layer_idx].attn
-        hook = attn_layer.register_forward_hook(zero_hook)
-        hooks.append(hook)
-        
-        try:
-            inputs = self.tokenizer(question, return_tensors="pt").to(self.device)
-            
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    inputs.input_ids,
-                    attention_mask=inputs.attention_mask,
-                    max_new_tokens=50,
-                    do_sample=False,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                )
-            
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            is_correct = str(answer).strip() in response
-            
-            return is_correct
-        finally:
-            for h in hooks:
-                h.remove()
-    
-    def ablate_layer(self, question, answer, layer_idx):
-        """
-        Zero out an entire layer and measure impact.
-        
-        Args:
-            question: Input question text.
-            answer: Correct answer text.
-            layer_idx: Layer index to ablate.
-        
-        Returns:
-            Boolean indicating if answer is correct after ablation.
-        """
-        hooks = []
-        
-        def zero_layer_hook(module, input, output):
-            return (torch.zeros_like(output[0]), *output[1:])
-        
-        attn_layer = self.model.transformer.h[layer_idx].attn
-        hook = attn_layer.register_forward_hook(zero_layer_hook)
-        hooks.append(hook)
-        
-        try:
-            inputs = self.tokenizer(question, return_tensors="pt").to(self.device)
-            
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    inputs.input_ids,
-                    attention_mask=inputs.attention_mask,
-                    max_new_tokens=50,
-                    do_sample=False,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                )
-            
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            is_correct = str(answer).strip() in response
-            
-            return is_correct
-        finally:
-            for h in hooks:
-                h.remove()
-    
-    def rank_heads(self, questions: List[str], answers: List[str]) -> Dict:
-        """
-        Rank attention heads by importance.
-        
-        Args:
-            questions: List of question texts.
-            answers: List of answer texts.
-        
-        Returns:
-            Dictionary with head rankings and importance scores.
-        """
-        baseline_correct = sum(
-            1 for q, a in zip(questions, answers)
-            if self._test_answer(q, a)
-        )
-        baseline_acc = baseline_correct / len(questions)
-        
-        head_importance = {}
-        
+
+        effects: Dict[Tuple[int, int], List[float]] = {}
         for layer_idx in range(self.num_layers):
             for head_idx in range(self.num_heads):
-                correct = 0
-                for q, a in zip(questions, answers):
-                    if self.ablate_head(q, a, layer_idx, head_idx):
-                        correct += 1
-                
-                acc_with_ablation = correct / len(questions)
-                importance = baseline_acc - acc_with_ablation
-                head_importance[(layer_idx, head_idx)] = importance
-        
-        sorted_heads = sorted(
-            head_importance.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
-        
-        return {
-            "baseline_accuracy": baseline_acc,
-            "head_importance": head_importance,
-            "sorted_heads": sorted_heads,
-        }
-    
-    def _test_answer(self, question, answer):
-        """Test if model produces correct answer."""
-        inputs = self.tokenizer(question, return_tensors="pt").to(self.device)
-        
-        with torch.no_grad():
-            outputs = self.model.generate(
-                inputs.input_ids,
-                attention_mask=inputs.attention_mask,
-                max_new_tokens=50,
-                do_sample=False,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
-        
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return str(answer).strip() in response
+                handle = self._register(layer_idx, head_idx, method)
+                try:
+                    ablated = logprob_of_continuation_batch(
+                        self.model, self.tokenizer, questions, answers, self.device
+                    )
+                finally:
+                    handle.remove()
+                effects[(layer_idx, head_idx)] = ablated
+
+        return baseline, effects

@@ -1,0 +1,36 @@
+{
+  "model_name": "gpt2",
+  "dataset_type": "gsm8k",
+  "num_samples": 5,
+  "baseline_accuracy": 0.0,
+  "model_params_millions": 124.4,
+  "num_layers": 12,
+  "num_heads": 12,
+  "failure_analysis": {
+    "total": 5,
+    "correct_count": 0,
+    "incorrect_count": 5,
+    "accuracy": 0.0
+  },
+  "error_patterns": {
+    "off_by_one": 0,
+    "wrong_operation": 0,
+    "incomplete_reasoning": 0,
+    "hallucination": 5
+  },
+  "examples": {
+    "correct": [],
+    "incorrect": [
+      {
+        "question": "Natalia sold clips to 48 of her friends in April, and then she sold clips to 3 fewer friends in May. How many friends did she sell clips to altogether? Answer:",
+        "answer": "93",
+        "response": "Natalia sold clips to 48 of her friends in April, and then she sold clips to 3 fewer friends in May. How many friends did she sell clips to altogether? Answer: 1,000.\n\nThe number of friends sold to her by her friends is not known. But it is likely that she sold clips to a few dozen people.\n\nThe number of friends sold to her by her friends is not known."
+      },
+      {
+        "question": "Weng earns 12 dollars per hour. How much does she earn in 27 hours? Answer:",
+        "answer": "324",
+        "response": "Weng earns 12 dollars per hour. How much does she earn in 27 hours? Answer: $1,000.\n\nHow much does she earn in 27 hours? Answer: $1,000. How much does she earn in 27 hours? Answer: $1,000. How much does she earn in 27 hours? Answer:"
+      }
+    ]
+  }
+}

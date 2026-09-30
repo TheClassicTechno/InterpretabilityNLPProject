@@ -4,7 +4,7 @@ from pathlib import Path
 
 from src.model_loader import ModelLoader
 from src.baseline import get_model_accuracy
-from src.ablation import HeadAblator
+from src.legacy_invalid_ablation import HeadAblator
 from src.analysis import LayerwiseAnalyzer, FailureAnalyzer
 from src.visualization import Visualizer
 from src.dataset import SimpleDataset

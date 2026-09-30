@@ -1,0 +1,90 @@
+{
+  "model_name": "gpt2",
+  "dataset_type": "arithmetic",
+  "num_samples": 8,
+  "baseline_accuracy": 0.0,
+  "head_analysis": {
+    "baseline_accuracy": 0.0,
+    "top_heads": [
+      {
+        "layer": 0,
+        "head": 0,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 1,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 2,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 3,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 4,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 5,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 6,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 7,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 8,
+        "importance": 0.0
+      },
+      {
+        "layer": 0,
+        "head": 9,
+        "importance": 0.0
+      }
+    ]
+  },
+  "layer_analysis": {
+    "baseline_accuracy": 0.0,
+    "layer_importance": {
+      "0": 0.0,
+      "1": 0.0,
+      "2": 0.0,
+      "3": 0.0,
+      "4": 0.0,
+      "5": 0.0,
+      "6": 0.0,
+      "7": 0.0,
+      "8": 0.0,
+      "9": 0.0,
+      "10": 0.0,
+      "11": 0.0
+    }
+  },
+  "failure_analysis": {
+    "total": 8,
+    "correct_count": 0,
+    "incorrect_count": 8,
+    "accuracy": 0.0
+  },
+  "error_patterns": {
+    "off_by_one": 0,
+    "wrong_operation": 2,
+    "incomplete_reasoning": 0,
+    "hallucination": 6
+  }
+}
