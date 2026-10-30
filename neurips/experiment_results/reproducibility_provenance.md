@@ -123,3 +123,125 @@ Hashes of the result files in this directory:
 The anonymized review package prepared for the NeurIPS 2026 workshop
 contained copies of these six files with only `config.git_commit` removed; no
 other field differs.
+
+## Mean-ablation robustness runs (added 2026-10-11, ARR/NAACL submission)
+
+Design fixed before running: mean-ablation replaces a head's slice of the
+`c_proj` input with its mean over all non-padding token positions of the
+induction discovery split; the same means are applied to every split. Each
+run was performed once and is reported regardless of outcome. Same machine,
+environment, seeds, and model revisions as above.
+
+| Run | Configuration | Wall time | Maximum resident set size |
+|---|---|---:|---:|
+| GPT-2 mean-ablation | 200 induction, 200 arithmetic, maximum operand 20 | 324.57 s | 2,114,846,720 bytes (1.97 GiB) |
+| DistilGPT2 mean-ablation | 200 induction, 200 arithmetic, maximum operand 20 | 107.79 s | 2,089,025,536 bytes (1.95 GiB) |
+| GPT-2 zero-mode regression after refactor | 200 induction, 200 arithmetic, maximum operand 20 | 188.20 s | 2,545,270,784 bytes (2.37 GiB) |
+
+```bash
+python scripts/run_neurips_experiments.py --model gpt2 --ablation mean
+python scripts/run_neurips_experiments.py --model distilgpt2 --ablation mean
+python scripts/posthoc_mean_vs_zero.py   # post hoc, reads the two files above
+```
+
+Checks:
+
+- The zero-mode regression rerun (written outside this directory) equals
+  `gpt2_results.json` after removing `config.timestamp_utc` and
+  `config.git_commit`, so the refactor (`rq2_statistics` helper) did not
+  change the zero-ablation pipeline.
+- Each `*_meanablation_results.json` recomputes the full zero-ablation
+  pipeline; with `config.timestamp_utc`, `config.git_commit`,
+  `config.ablation_baseline`, and `mean_ablation` removed it equals the
+  corresponding primary result file.
+- `mean_vs_zero_posthoc.json` is a post hoc summary (no forward passes).
+
+| File | SHA-256 |
+|---|---|
+| `gpt2_meanablation_results.json` | `7ab186b88833131f170ef8e0a73c3c2daa387317616824005d224b07828ae3d1` |
+| `distilgpt2_meanablation_results.json` | `bb30b37597eeeaffd458859df11bfaec04313645072b902242baf7a53433890e` |
+| `mean_vs_zero_posthoc.json` (GPT-2/DistilGPT2 only; superseded below) | `2149b050fd0f4e5601791e78800add07b2d917ac3bec9d0e12a05ee98c5fa1f4` |
+
+Source files used for these runs:
+
+| File | SHA-256 |
+|---|---|
+| `src/ablation.py` | `a0fb65fdaf7785ba6790e65ae62253da210603e96851ce500aab0a3d0d427ece` |
+| `scripts/run_neurips_experiments.py` | `62423b9aeb92f0dd7129daf1759fd699ce8f7860fb92c5ad7616777222eb89b2` |
+| `scripts/posthoc_mean_vs_zero.py` | `2ec63fcfb743dac28613f01d8c19795e36a8a1c50896b72e3f21971c6bfd4ddd` |
+| `tests/test_ablation_semantics.py` | `55470d1877d38dba811c58d69a4fc707ba5fe65718e343741f79a2c187c5f3a1` |
+
+## Qwen2.5-1.5B-Instruct replication and arithmetic-format diagnostic
+
+The architecture adapter (`attention_modules` in `src/ablation.py`) places
+pre-projection hooks on `o_proj` for Llama/Qwen2-family models and leaves
+GPT-2-family behavior unchanged: after the change, a DistilGPT2 zero-mode rerun
+equaled `distilgpt2_results.json` after removing `config.timestamp_utc` and
+`config.git_commit`. Three tests on a tiny random Qwen2 configuration assert
+the same intervention semantics as for GPT-2 (20 tests in total).
+
+| Run | Configuration | User CPU time | Maximum resident set size |
+|---|---|---:|---:|
+| Qwen2.5-1.5B-Instruct, zero + mean ablation | 200 induction, 200 arithmetic, maximum operand 20 | 11,975.83 s | 9,667,149,824 bytes (9.0 GiB) |
+
+Wall-clock time (77,218 s) is not meaningful because the machine was
+suspended for much of the run. The run was performed once and not repeated.
+
+```bash
+python scripts/run_neurips_experiments.py --model Qwen/Qwen2.5-1.5B-Instruct --ablation mean \
+  --output neurips/experiment_results/qwen2.5-1.5b-instruct_meanablation_results.json
+python scripts/posthoc_mean_vs_zero.py          # now also summarizes Qwen
+python scripts/diagnose_arithmetic_format.py    # post hoc, all three models
+```
+
+`arithmetic_format_diagnostic.json` (post hoc): teacher-forced exact match on
+the arithmetic task with the answer written without its leading space is 0.0
+for GPT-2 and DistilGPT2 and 0.23 for Qwen2.5-1.5B-Instruct, whose tokenizer
+splits " 24" into a bare space token plus digits.
+
+`mean_vs_zero_posthoc.json` was regenerated to add Qwen; its GPT-2 and
+DistilGPT2 values are unchanged.
+
+| File | SHA-256 |
+|---|---|
+| `qwen2.5-1.5b-instruct_meanablation_results.json` | `89b9cd002dc7bc0b296504e6d9fc97ddb45c89fab3968c855822ffb0d2d31793` |
+| `mean_vs_zero_posthoc.json` (regenerated) | `0d389c079a1f20b6026426e25112cae447a5a2b01be7baf2918ba1f6eec97c60` |
+| `arithmetic_format_diagnostic.json` | `e591f6a47d37f978bc68c84aaa6fc8ee7cd85fb3e404da1853af53dfb72cee3a` |
+| `src/ablation.py` (with adapter; used for the Qwen run) | `39fb03ba614c7676cfc471593c7462d6d084da34688c32de1a1bd23d636b2390` |
+| `tests/test_ablation_semantics.py` | `b24ba9cd651f80eaa89ceb77f9a1b42ad57c5bd6fd5171a159858f32441665f8` |
+| `scripts/diagnose_arithmetic_format.py` | `025edd5e42c1b66809f8898f8222c601360a5bb880ea940625a2aa9a736ed222` |
+| `scripts/posthoc_mean_vs_zero.py` | `173b014868119562a196a6e624950c3cdb8a1a70cec69f0035c36d448a75ee50` |
+
+## Camera-ready analyses (added 2026-10-30, NeurIPS InterpScience camera-ready)
+
+Design fixed in writing before running: `neurips/camera_ready_design.md` (Sec. 3, C1 partition sensitivity, C2 sequence-continuation control).
+Same machine and environment as above (torch 2.8.0, transformers 4.57.3, CPU, float32). Measured with `/usr/bin/time -l`.
+
+| Run | Command | Wall time | Peak RSS | Output |
+|---|---|---|---|---|
+| C1/C2, GPT-2 | `python scripts/run_camera_ready_robustness.py --model gpt2` | 301.43 s (in-script 298.77 s) | 2,042,281,984 B (1.90 GiB) | `gpt2_camera_ready_robustness.json` |
+| C1/C2, DistilGPT2 | `python scripts/run_camera_ready_robustness.py --model distilgpt2` | 82.08 s (in-script 79.97 s) | 1,745,158,144 B (1.63 GiB) | `distilgpt2_camera_ready_robustness.json` |
+
+Built-in sanity check: per-head Δ recomputed on all 200 copying examples, restricted to the original partition, matches the saved
+`per_head_delta_discovery` / `per_head_delta_heldout` with max abs deviation 0.0 (`config.sanity_max_abs_dev_vs_saved`) for both models.
+
+Verification performed 2026-10-30 before the camera-ready numbers were trusted:
+
+- Regression: `scripts/run_neurips_experiments.py --model gpt2 --output <scratch>/gpt2_results.json` (default configuration) with the current code reproduces
+  `gpt2_results.json` exactly apart from `config.timestamp_utc` and `config.git_commit`.
+- IOI reproduction: `scripts/run_ioi_ablation_methods.py` rerun to a scratch directory reproduces
+  `results/naacl_ioi/gpt2_ioi_ablation_methods.json` exactly apart from `config.timestamp_utc`.
+- Hashes of all pre-existing result files (sections above and `results/naacl_ioi/*.json`) were recorded before the camera-ready work
+  and are unchanged after it.
+- `pytest tests/`: 29 passed (includes `tests/test_sequence_control.py`).
+- `scripts/verify_paper_numbers.py`: 121/121 printed values match the result files.
+
+| File | SHA-256 |
+|---|---|
+| `gpt2_camera_ready_robustness.json` | `3576c6b78fb8460d0bbbf1e9ea94904abaacde5126f2c466e9568a0a2971c235` |
+| `distilgpt2_camera_ready_robustness.json` | `cfd0c4f3b185be420dc13400432dcc76d1110c9fd940b52d247e8aa21b8a2699` |
+| `scripts/run_camera_ready_robustness.py` | `01e89072b42737ab150bbb5bb8837d64edc99876584d95d1b6a99a46bdeaa774` |
+| `src/dataset.py` (adds the sequence-continuation task) | `ce5711a7e84c1a212ae9660f37c5a8852348ab061d2ea7a4ea54508dfc1d8ea3` |
+| `src/ablation.py` | `e788f80e448453e118bf4dc8732e5967425355b4748c350a6ecbd99e012aa9c6` |
+| `tests/test_sequence_control.py` | `07f027c55b9f2b822dd15142dff27983da6cb503ada628a4f98eb2d4d9c15a0c` |
+| `scripts/verify_paper_numbers.py` | `c86c4b25cfb7670c2e220d3763db8b92c094079927db164bd7e27311ce6753de` |
