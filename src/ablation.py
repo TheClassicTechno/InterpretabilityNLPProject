@@ -244,3 +244,28 @@ def register_head_intervention(model, layer_idx, head_idx, method, means=None, s
     else:
         raise ValueError(f"Unknown method: {method}")
     return out_proj.register_forward_pre_hook(fn)
+
+
+def copying_token_signature(tokenizer, question: str, answer: str) -> Tuple[int, ...]:
+    """Token count of each whitespace-separated item of a copying prompt
+    (the first item without, every later item with, its leading space),
+    followed by the answer's token count. Two prompts with the same
+    signature are position-aligned: every position plays the same role."""
+    words = question.split(" ")
+    sig = [len(tokenizer(w if i == 0 else " " + w)["input_ids"]) for i, w in enumerate(words)]
+    sig.append(len(tokenizer(answer)["input_ids"]))
+    return tuple(sig)
+
+
+def match_resample_sources(signatures, split_ids, rng) -> List:
+    """For each example, the index of a different example with the same
+    signature in the same split, drawn uniformly with `rng`; None when no
+    such example exists (the caller excludes it)."""
+    groups: Dict = {}
+    for i, key in enumerate(zip(split_ids, signatures)):
+        groups.setdefault(key, []).append(i)
+    sources = []
+    for i, key in enumerate(zip(split_ids, signatures)):
+        pool = [j for j in groups[key] if j != i]
+        sources.append(int(rng.choice(pool)) if pool else None)
+    return sources
