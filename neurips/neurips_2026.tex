@@ -61,10 +61,10 @@ log-probability stays graded. Third, with a discovery/held-out split and
 1{,}000 matched random-head and layer-matched control draws, the top-5
 selected heads' held-out effect exceeds both controls (Monte Carlo
 $p=0.001$), and it does so in all 20 random re-partitions. That effect,
-however, depends on the replacement value: under mean-ablation, the same
-GPT-2 heads' effect falls from 0.412 to 0.005 nats, and on indirect
-object identification zero-ablation shares only 2 of its top-5 heads
-with mean or resample ablation. Task specificity is not established on
+however, depends on the replacement value: the same GPT-2 heads' effect
+falls from 0.412 nats to 0.005 under mean-ablation and to 0.020 under
+resample-ablation, and on indirect object identification zero-ablation
+shares only 2 of its top-5 heads with mean or resample ablation. Task specificity is not established on
 GPT-2: the contrast with arithmetic is inconclusive ($p=0.078$;
 $p=0.274$ at $N=500$), and against a format-matched sequence-continuation
 control it disappears ($p=0.567$). A single-head ablation result is not
@@ -130,9 +130,9 @@ in a pre-committed $N=500$ rerun), and against a format-matched
 sequence-continuation task it disappears ($p=0.567$).
 
 \textbf{(4) The replacement value changes which heads are selected.}
-Under mean-ablation, the five zero-selected GPT-2 heads have almost no
-held-out effect (0.005 vs.\ 0.412 nats), and reselection yields a
-disjoint set. On IOI, zero-ablation shares only 2 of its top-5 heads
+Under mean-ablation and under resample-ablation, the five zero-selected
+GPT-2 heads have almost no held-out effect (0.005 and 0.020 vs.\ 0.412
+nats), and reselection yields sets that share no head with them. On IOI, zero-ablation shares only 2 of its top-5 heads
 with mean or resample ablation. Baseline dependence is partial on
 DistilGPT2 and small on Qwen2.5, so it must be checked per model.
 
@@ -285,9 +285,12 @@ pre-mix slice. Every causal claim uses this pre-projection location.
 The primary analysis replaces the slice with zero. The robustness checks
 replace it with the slice's mean (\emph{mean-ablation}; computed over all
 non-padding positions of the discovery split only and applied unchanged
-to every split, so held-out data never inform the intervention) or, for
-IOI only, with its activation on a corrupted prompt
-(\emph{resample-ablation}; Section~\ref{sec:ioi}). These semantics are asserted by
+to every split, so held-out data never inform the intervention) or with
+its activation on another input (\emph{resample-ablation}). For copying,
+the source is a different example from the same split whose words split
+into the same numbers of tokens, so every position plays the same role
+(one discovery example has no such partner and is dropped, leaving 99);
+for IOI, it is a corrupted prompt (Section~\ref{sec:ioi}). These semantics are asserted by
 executable tests that run before the pipeline and ship with the code: on a
 small GPT-2 configuration they check that the pre-hook zeroes exactly the
 requested head's slice of the projection input and leaves every other
@@ -338,7 +341,10 @@ Each of the three configurations was then rerun independently; all three
 reproduced their saved result files exactly, byte for byte, apart from
 the recorded timestamp. The camera-ready partition and sequence-control
 analyses (\texttt{scripts/run\_camera\_ready\_robustness.py}) took
-301.43~s (1.90~GiB) for GPT-2 and 82.08~s (1.63~GiB) for DistilGPT2.
+301.43~s (1.90~GiB) for GPT-2 and 82.08~s (1.63~GiB) for DistilGPT2,
+and the copying resample analysis
+(\texttt{scripts/run\_resample\_copying.py}) took 914.99~s (2.14~GiB)
+and 325.98~s (2.10~GiB).
 The software environment, model revisions,
 file hashes, storage, and verification commands are recorded in
 \texttt{neurips/experiment\_results/reproducibility\_provenance.md}. Every
@@ -546,19 +552,46 @@ DistilGPT2 the baselines agree more closely ($r=0.553$, $\rho=0.871$,
 1/5 overlap), and the zero-selected heads keep part of their effect
 (0.586 to 0.182 nats). On Qwen2.5-1.5B-Instruct the same five heads are
 selected under both baselines (5/5 overlap) and keep most of their
-effect (0.208 to 0.155 nats; Appendix~\ref{app:qwen}). Under
+effect (0.208 to 0.155 nats; Appendix~\ref{app:qwen}).
+
+\textbf{Resample-ablation agrees with mean-ablation.} A pooled mean is
+itself a value a head may never produce, so the collapse above could
+reflect the mean rather than the removal of an off-distribution zero. We
+therefore replaced each head's output, at every position, by its output
+on another copying example (Section~\ref{sec:design}), an analysis
+specified before it was run. On GPT-2 the five zero-selected heads then
+have a held-out effect of 0.020 nats (CI $[0.006,0.035]$), no larger
+than that of random head sets (mean 0.015, $p=0.346$) or layer-matched
+sets ($p=0.430$); with two other random source assignments it is 0.005
+and 0.011 nats. Heads reselected under resample-ablation (Layer~10
+Heads~0, 11, 1, and~6; Layer~11 Head~2) exceed both controls (0.179
+nats, $p=0.001$ each). They share no head with the zero-ablation set and
+two with the mean-ablation set, and their per-head effects correlate
+more with mean-ablation than with zero-ablation (held-out Pearson
+$r=0.716$ vs.\ $0.279$). On DistilGPT2, resample-ablation selects exactly
+the mean-ablation candidates (5/5; $r=0.940$ with mean, $0.452$ with
+zero), and the zero-selected heads keep 0.201 nats, close to their 0.182
+under mean-ablation: above layer-matched sets ($p=0.001$) but not clearly
+above random sets ($p=0.075$). The two on-distribution baselines agree
+with each other, and zero-ablation is the outlier, as on IOI
+(Section~\ref{sec:ioi}).
+
+Under
 mean-ablation the GPT-2 specificity contrast against arithmetic gives
 $p=0.014$ (0.168 nats versus a random-control mean of 0.021), but it concerns a different head set, comes from a single run,
 and inherits the arithmetic mismatch, so we do not treat it as evidence
 of task specificity.
 
 \begin{table}[t]
-  \caption{Mean-ablation robustness check ($N=200$ per task; $\Delta$ in
-  nats). The first block compares per-head effects under the two
-  baselines. The second repeats RQ2 with candidates reselected under
-  mean-ablation. The last block evaluates the zero-selected candidates
-  under both baselines and was computed post hoc from the saved per-head
-  effects. Intervals are 95\% percentile-bootstrap CIs over examples;
+  \caption{Robustness to the replacement value ($N=200$ per task; $\Delta$
+  in nats). The first block compares per-head effects under zero and mean
+  ablation. The second repeats RQ2 with candidates reselected under
+  mean-ablation. The third evaluates the zero-selected candidates under
+  zero and mean ablation and was computed post hoc from the saved per-head
+  effects. The last block is the pre-specified resample-ablation analysis
+  (discovery $N=99$, held-out $N=100$): held-out $\Delta$ of the stated
+  heads, $p$-values against random and layer-matched head sets, and the
+  per-head held-out Pearson $r$ with the other two baselines. Intervals are 95\% percentile-bootstrap CIs over examples;
   $^\dagger$5th--95th percentile of 1{,}000 control draws.}
   \label{tab:mean}
   \centering
@@ -582,6 +615,13 @@ of task specificity.
     \midrule
     Zero-selected heads, held-out $\Delta$ under zero & 0.412 & -- & 0.586 & -- \\
     Zero-selected heads, held-out $\Delta$ under mean & 0.005 & -- & 0.182 & -- \\
+    \midrule
+    Zero-selected heads under resample & 0.020 & [0.006, 0.035] & 0.201 & [0.173, 0.232] \\
+    \quad $p$: random / layer-matched & \multicolumn{2}{r}{0.346 / 0.430} & \multicolumn{2}{r}{0.075 / 0.001} \\
+    Resample-selected, held-out $\Delta$ & 0.179 & [0.159, 0.200] & 0.586 & [0.516, 0.659] \\
+    \quad $p$: random / layer-matched & \multicolumn{2}{r}{0.001 / 0.001} & \multicolumn{2}{r}{0.001 / 0.001} \\
+    Overlap with zero / mean top-5 & \multicolumn{2}{r}{0/5 / 2/5} & \multicolumn{2}{r}{1/5 / 5/5} \\
+    Pearson $r$ with zero / mean & \multicolumn{2}{r}{0.279 / 0.716} & \multicolumn{2}{r}{0.452 / 0.940} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -623,7 +663,7 @@ specific causal contribution $<$ mechanistic role), our evidence
 supports a held-out-replicated intervention effect that exceeds matched
 controls (the third rung), but only relative to a stated replacement
 value. The zero-selected GPT-2 heads reach this rung under zero-ablation
-and not under mean-ablation. The Qwen2.5 heads reach it under both. No
+and not under mean- or resample-ablation. The Qwen2.5 heads reach it under both. No
 GPT-2 specificity contrast supports the fourth rung. A mechanistic
 account would require further evidence, such as activation patching,
 input-dependence analysis, or directional interventions.
@@ -638,9 +678,10 @@ a limited diagnostic. The sequence-continuation control
 baseline. It removes the GPT-2 contrast but not the DistilGPT2 one, and
 it is still only one alternative rule.
 
-\textbf{Ablation baseline.} We tested zero, mean, and (for IOI)
-resample replacement. We did not test noise injection or optimal
-ablation \citep{li2024optimal}. Because the baseline changed the selected
+\textbf{Ablation baseline.} We tested zero, mean, and resample
+replacement (resample on copying for GPT-2 and DistilGPT2, and on IOI).
+We did not test noise injection or optimal
+ablation \citep{li2024optimal}, or resample-ablation on Qwen2.5. Because the baseline changed the selected
 heads on GPT-2 and IOI but barely on Qwen2.5, whether it matters has to
 be checked for each model and task.
 
@@ -652,8 +693,9 @@ and the selected heads exceed both matched controls
 the near-ceiling example is specific to GPT-2. Qwen2.5-1.5B-Instruct is
 a different architecture family and reproduces the projection confound
 and the matched-control separation (Appendix~\ref{app:qwen}). We did not
-test models larger than 1.5B parameters, and the new partition and
-sequence-control analyses were run on GPT-2 and DistilGPT2 only, because
+test models larger than 1.5B parameters, and the new partition,
+sequence-control, and copying resample analyses were run on GPT-2 and
+DistilGPT2 only, because
 one Qwen pipeline run took 3.3 CPU-hours.
 
 \textbf{Partitions and sample size.} The partition analysis reuses the
@@ -665,7 +707,7 @@ hook selected disjoint heads; accuracy hid information at the floor and
 near the ceiling; the specificity contrast blocked a task-specificity
 claim that the larger GPT-2 run does not support; and the replacement
 value changed which heads were selected and, for GPT-2, removed the
-selected heads' effect. A single-head ablation report should therefore
+selected heads' effect under both on-distribution baselines. A single-head ablation report should therefore
 state the intervention point with a test that it isolates one head, use
 a continuous metric beside accuracy, select on held-out-separated data
 against matched controls, and report the replacement value together with
@@ -938,8 +980,10 @@ leave the original result files unchanged:
 \texttt{arithmetic\_format\_diagnostic.json} (Appendix~\ref{app:qwen}),
 \texttt{results/naacl\_ioi/} (Section~\ref{sec:ioi}), and
 \texttt{\{gpt2,distilgpt2\}\_camera\_ready\_robustness.json}
-(Section~\ref{sec:rq2}, Appendix~\ref{app:partitions}). The design of the
-partition and sequence-control analyses was fixed in
+(Section~\ref{sec:rq2}, Appendix~\ref{app:partitions}), and
+\texttt{\{gpt2,distilgpt2\}\_resample\_copying.json}
+(Section~\ref{sec:mean}). The design of the
+partition, sequence-control, and resample analyses was fixed in
 \texttt{neurips/camera\_ready\_design.md} before they were run.
 
 \newpage
