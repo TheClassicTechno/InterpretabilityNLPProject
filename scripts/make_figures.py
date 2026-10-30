@@ -114,6 +114,7 @@ def make_main_figure(d):
     fig.tight_layout()
     out = FIG_DIR / "main_figure.png"
     fig.savefig(out, bbox_inches="tight")
+    fig.savefig(out.with_suffix(".pdf"), bbox_inches="tight")  # vector copy for LaTeX
     plt.close(fig)
     print(f"Saved {out}")
 
@@ -142,6 +143,7 @@ def make_rq0_figure(d):
     fig.tight_layout()
     out = FIG_DIR / "rq0_naive_vs_correct.png"
     fig.savefig(out, bbox_inches="tight")
+    fig.savefig(out.with_suffix(".pdf"), bbox_inches="tight")  # vector copy for LaTeX
     plt.close(fig)
     print(f"Saved {out}")
 
