@@ -4,8 +4,9 @@ Code, saved results, and figures for the paper **"When Do Attention-Head
 Ablations Support Causal Claims? Projection-Level Confounds, Floor Effects,
 and Matched Controls"** (Juli Huang, Stanford University).
 
-The project studies whether attention-head ablation in GPT-2-family models
-supports the causal claims it is typically used to make. It started as a
+The project studies whether attention-head ablation in small language models
+supports the causal claims it is typically used to make (GPT-2 small, with
+replications on DistilGPT2 and Qwen2.5-1.5B-Instruct). It started as a
 straightforward "which heads matter" ablation study; auditing it turned up a
 real implementation bug and a floor-effect problem that made the original
 conclusions unsupported (see [What changed](#what-changed) below). It was
@@ -13,8 +14,9 @@ then rebuilt around that finding.
 
 ## What the paper shows
 
-Working with GPT-2 small, on a controlled induction-style copying task and
-an off-target arithmetic control task:
+Working with GPT-2 small, on a controlled induction-style copying task, an
+off-target arithmetic control task, and a format-matched sequence-continuation
+control task:
 
 1. **A naive attention-head ablation hook doesn't ablate a head.** A
    forward hook registered on the whole attention module's output zeroes a
@@ -34,13 +36,23 @@ an off-target arithmetic control task:
    per-head effect ranking is stable across splits (Spearman rho=0.974 over
    all 144 heads), and the top-5 heads' held-out effect (0.412 nats) exceeds
    both 1,000-draw random-head and layer-matched control distributions
-   (Monte Carlo p=0.001 each). Whether the effect is specific to the copying
-   task is only suggestive in the primary run (p=0.078) and weaker in a
-   pre-committed N=500 rerun (p=0.274).
+   (Monte Carlo p=0.001 each), in the original partition and in all 20
+   random re-partitions. Task specificity is not established: the contrast
+   with arithmetic is inconclusive (p=0.078; p=0.274 in a pre-committed N=500
+   rerun), and against a format-matched sequence-continuation control it
+   disappears (p=0.567).
+4. **The replacement value changes which heads are selected.** Under
+   mean-ablation the five zero-selected GPT-2 heads have almost no held-out
+   effect (0.005 vs. 0.412 nats, post hoc), and reselection yields a disjoint
+   set that still beats both controls. On indirect object identification,
+   zero-ablation shares only 2 of its top-5 heads with mean or resample
+   ablation.
 
 On DistilGPT2, the intervention-semantic and matched-control findings
 replicate and the arithmetic floor recurs; copying accuracy is lower (90.0%),
-so GPT-2's near-ceiling example does not replicate.
+so GPT-2's near-ceiling example does not replicate. Qwen2.5-1.5B-Instruct, a
+different architecture family, reproduces the projection confound (r=0.108,
+0/5 overlap) and the matched-control separation under both baselines.
 
 `neurips/claim_evidence_map.md` lists, for every quantitative statement in
 the paper, the exact JSON field it was read from.
@@ -112,6 +124,56 @@ python scripts/run_neurips_experiments.py \
   --n-induction 500 \
   --n-arithmetic 500 \
   --arithmetic-max-operand 30
+```
+
+### Analyses added for the camera-ready version
+
+Each writes a separate file and refuses to overwrite an existing one, so pass
+`--output` (or `--out-dir`) to rerun next to the saved reference. Measured
+times and memory are in `neurips/experiment_results/reproducibility_provenance.md`.
+
+Mean-ablation robustness (paper Section 4.4, Table 2):
+
+```bash
+python scripts/run_neurips_experiments.py --model gpt2 --ablation mean \
+  --output neurips/experiment_results/reproduced_gpt2_meanablation_results.json
+python scripts/run_neurips_experiments.py --model distilgpt2 --ablation mean \
+  --output neurips/experiment_results/reproduced_distilgpt2_meanablation_results.json
+python scripts/posthoc_mean_vs_zero.py   # post hoc; reads the saved per-head vectors
+```
+
+Qwen2.5-1.5B-Instruct replication, zero and mean ablation (Appendix C; about
+3.3 CPU-hours and 9.0 GiB), and the post hoc arithmetic-format check (Section 4.2):
+
+```bash
+python scripts/run_neurips_experiments.py --model Qwen/Qwen2.5-1.5B-Instruct --ablation mean \
+  --output neurips/experiment_results/reproduced_qwen2.5-1.5b-instruct_meanablation_results.json
+python scripts/diagnose_arithmetic_format.py \
+  --output neurips/experiment_results/reproduced_arithmetic_format_diagnostic.json
+```
+
+Indirect object identification under zero, mean, and resample ablation
+(Section 4.5, Appendix D):
+
+```bash
+python scripts/run_ioi_ablation_methods.py --model gpt2 --out-dir /tmp/ioi_rerun
+```
+
+Partition sensitivity (C1) and the format-matched sequence-continuation
+control (C2), pre-specified in `neurips/camera_ready_design.md`
+(Section 4.3, Appendix E):
+
+```bash
+python scripts/run_camera_ready_robustness.py --model gpt2 \
+  --output neurips/experiment_results/reproduced_gpt2_camera_ready_robustness.json
+python scripts/run_camera_ready_robustness.py --model distilgpt2 \
+  --output neurips/experiment_results/reproduced_distilgpt2_camera_ready_robustness.json
+```
+
+Check every value printed in the paper against the saved result files:
+
+```bash
+python scripts/verify_paper_numbers.py
 ```
 
 The saved reference outputs are `gpt2_results.json`,
