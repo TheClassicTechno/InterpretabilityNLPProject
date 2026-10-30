@@ -99,7 +99,8 @@ layer-matched controls. The primary model is GPT-2 small (124M
 parameters, 12 layers $\times$ 12 heads); DistilGPT2 and
 Qwen2.5-1.5B-Instruct serve as replications, and indirect object
 identification (IOI) on GPT-2 as an established circuit task. We report
-four findings (Section~\ref{sec:results}).
+four findings, one per research question (RQ0--RQ3), matching the
+subsections of Section~\ref{sec:results}.
 
 \textbf{(1, RQ0) The ablation implementation matters.} A hook registered on
 the whole attention module's output, a natural way to write ``zero out
@@ -129,7 +130,7 @@ against an off-target arithmetic task is inconclusive ($p=0.078$; $p=0.274$
 in a pre-committed $N=500$ rerun), and against a format-matched
 sequence-continuation task it disappears ($p=0.567$).
 
-\textbf{(4) The replacement value changes which heads are selected.}
+\textbf{(4, RQ3) The replacement value changes which heads are selected.}
 Under mean-ablation and under resample-ablation, the five zero-selected
 GPT-2 heads have almost no held-out effect (0.005 and 0.020 vs.\ 0.412
 nats), and reselection yields sets that share no head with them. On IOI, zero-ablation shares only 2 of its top-5 heads
@@ -442,8 +443,8 @@ five GPT-2 candidates lowers the sequence-task log-probability by 0.447
 nats, far more than random head sets do (mean 0.051, $p=0.001$) and as
 much as it lowers held-out copying. Their specificity against this
 control is $-0.035$ nats (random-control mean $-0.023$, $p=0.567$), and
-the candidates selected under mean-ablation behave the same way
-($-0.138$ nats, $p=0.882$). On GPT-2, we therefore find no evidence
+the candidates selected under mean-ablation (Section~\ref{sec:mean})
+behave the same way ($-0.138$ nats, $p=0.882$). On GPT-2, we therefore find no evidence
 under either baseline that the selected heads' effect is specific to
 in-context copying: they harm the format-matched task at least as much.
 A null contrast against one control task does not, however, rule out
@@ -453,8 +454,9 @@ nats, no more than random head sets (mean 0.107, $p=0.280$), so their
 specificity is 0.472 nats ($p=0.001$; mean-ablation candidates 0.382,
 $p=0.001$). For DistilGPT2, the effect is larger on in-context copying
 than on a format-matched task that cannot be solved by copying. This is
-evidence of a task-dependent effect, not of an induction mechanism, and
-its baseline match is looser (87.6\% vs.\ 90.0\% on copying).
+evidence of a task-dependent effect, not of an induction mechanism. The
+baseline match is also looser for DistilGPT2 (87.6\% exact match on the
+sequence task vs.\ 90.0\% on copying).
 
 \textbf{Sensitivity to the partition.} We repeated selection and
 evaluation over 20 random 100/100 partitions of the 200 copying examples
@@ -470,7 +472,7 @@ The partitions overlap, so this is a sensitivity analysis rather than 20
 independent replications.
 
 \begin{table}[t]
-  \caption{Summary of all RQ1/RQ2 quantities. All values are computed
+  \caption{Primary GPT-2 RQ1/RQ2 quantities. All values are computed
   from \texttt{gpt2\_results.json} (Section~\ref{sec:design}). CIs are
   95\% percentile bootstrap over examples except where noted.
   ``Control range'' is the 5th--95th percentile of 1{,}000 control
@@ -519,68 +521,66 @@ independent replications.
 \end{figure}
 
 
-\subsection{Robustness to the ablation baseline}
+\subsection{RQ3: Does the replacement value change the conclusion?}
 \label{sec:mean}
 
-Zero is an off-distribution value for a head's output, so an observed
-effect could reflect that distribution shift rather than the removal of
-a computation. In response to review, we repeated the full RQ2 pipeline
-with mean-ablation (Section~\ref{sec:design}), keeping the data, splits,
-selection rule, controls, seeds, and statistics unchanged
+Zero is a value a head's output may never take, so the RQ2 effect could
+reflect that distribution shift rather than the removal of a
+computation. After obtaining the primary results, we therefore reran the
+RQ2 pipeline with two replacement values that stay on the model's
+activation distribution (Section~\ref{sec:design}): the head's mean output
+(\emph{mean-ablation}) and its output on another copying example
+(\emph{resample-ablation}, specified in writing before it was run). Data,
+splits, selection rule, controls, seeds, and statistics are unchanged
 (Table~\ref{tab:mean}).
 
-\textbf{The protocol still separates candidates from controls.} Under
-mean-ablation, the reselected candidates exceed both the random-head and
-the layer-matched controls on held-out data for both models (Monte Carlo
-$p=0.001$ for each comparison), and the per-head ranking remains stable
-across splits (Spearman $\rho=0.948$ for GPT-2, $0.960$ for DistilGPT2).
+\textbf{The protocol still finds heads that beat both controls.} Under
+either baseline and on both models, the reselected candidates exceed the
+random-head and layer-matched controls on held-out data (Monte Carlo
+$p=0.001$ for each comparison). The matched-control protocol is
+therefore not tied to zero-ablation.
 
-\textbf{The selected heads and their effect depend on the baseline.} On
-GPT-2, per-head effects under the two baselines are only moderately
-correlated on the discovery split (Pearson $r=0.424$, Spearman
-$\rho=0.495$). The mean-ablation candidates (Layer~10 Heads~11 and~0,
-Layer~7 Head~6, Layer~0 Heads~9 and~3) share no head with the
-zero-ablation candidates, and their held-out effect is smaller (0.176
-nats, CI $[0.157,0.194]$). In a post hoc comparison computed from the
-saved per-head vectors, the five zero-selected GPT-2 heads have a mean
-held-out effect of only 0.005 nats under mean-ablation, compared with
-0.412 nats under zero-ablation, and below the mean of the mean-ablation
-random control (0.016). The RQ2 effect of these particular heads is
-therefore consistent with replacing their output by an off-distribution
-value rather than with removing information the copying task needs. On
-DistilGPT2 the baselines agree more closely ($r=0.553$, $\rho=0.871$,
-1/5 overlap), and the zero-selected heads keep part of their effect
-(0.586 to 0.182 nats). On Qwen2.5-1.5B-Instruct the same five heads are
-selected under both baselines (5/5 overlap) and keep most of their
-effect (0.208 to 0.155 nats; Appendix~\ref{app:qwen}).
+\textbf{It finds different heads.} On GPT-2, the mean-ablation
+candidates (Layer~10 Heads~11 and~0, Layer~7 Head~6, Layer~0 Heads~9
+and~3) and the resample-ablation candidates (Layer~10 Heads~0, 11, 1,
+and~6, Layer~11 Head~2) share no head with the zero-ablation candidates,
+four of which lie in layers 0 and~1, but they share Layer~10 Heads~0
+and~11 with each other. Per-head effects agree in the same way: on the
+discovery split, mean- and resample-ablation correlate at Pearson
+$r=0.724$, whereas zero-ablation correlates with them at only $0.424$
+and $0.212$.
 
-\textbf{Resample-ablation agrees with mean-ablation.} A pooled mean is
-itself a value a head may never produce, so the collapse above could
-reflect the mean rather than the removal of an off-distribution zero. We
-therefore replaced each head's output, at every position, by its output
-on another copying example (Section~\ref{sec:design}), an analysis
-specified before it was run. On GPT-2 the five zero-selected heads then
-have a held-out effect of 0.020 nats (CI $[0.006,0.035]$), no larger
-than that of random head sets (mean 0.015, $p=0.346$) or layer-matched
-sets ($p=0.430$); with two other random source assignments it is 0.005
-and 0.011 nats. Heads reselected under resample-ablation (Layer~10
-Heads~0, 11, 1, and~6; Layer~11 Head~2) exceed both controls (0.179
-nats, $p=0.001$ each). They share no head with the zero-ablation set and
-two with the mean-ablation set, and their per-head effects correlate
-more with mean-ablation than with zero-ablation (held-out Pearson
-$r=0.716$ vs.\ $0.279$). On DistilGPT2, resample-ablation selects exactly
-the mean-ablation candidates (5/5; $r=0.940$ with mean, $0.452$ with
-zero), and the zero-selected heads keep 0.201 nats, close to their 0.182
-under mean-ablation: above layer-matched sets ($p=0.001$) but not clearly
-above random sets ($p=0.075$). The two on-distribution baselines agree
-with each other, and zero-ablation is the outlier, as on IOI
-(Section~\ref{sec:ioi}).
+\textbf{The zero-selected heads lose their effect.} In a post hoc
+comparison computed from the saved per-head effects, the five
+zero-selected GPT-2 heads have a held-out effect of 0.005 nats under
+mean-ablation instead of 0.412, below the mean of the mean-ablation
+random control (0.016). Because a pooled mean is itself a value a head
+may never produce, the pre-specified resample analysis tests the same
+heads with replacements the heads actually produce. Their effect is
+then 0.020 nats (CI $[0.006,0.035]$), no larger than that of random head
+sets (mean 0.015, $p=0.346$) or layer-matched sets ($p=0.430$), and it
+is 0.005 and 0.011 nats with two other random choices of source
+examples. On GPT-2, the RQ2 effect of these heads is therefore
+consistent with replacing their output by an off-distribution value, not
+with removing information the copying task needs.
 
-Under
-mean-ablation the GPT-2 specificity contrast against arithmetic gives
-$p=0.014$ (0.168 nats versus a random-control mean of 0.021), but it concerns a different head set, comes from a single run,
-and inherits the arithmetic mismatch, so we do not treat it as evidence
-of task specificity.
+\textbf{How much the baseline matters depends on the model.} On
+DistilGPT2, resample-ablation selects exactly the mean-ablation
+candidates, which share one head with the zero-ablation set, and the
+zero-selected heads keep about a third of their effect (0.586 nats under
+zero, 0.182 under mean, 0.201 under resample). Under resample that
+remainder exceeds layer-matched head sets ($p=0.001$) but not clearly
+random ones ($p=0.075$). On Qwen2.5-1.5B-Instruct, mean-ablation
+reselects the same five heads as zero-ablation, and they keep most of
+their effect (0.208 to 0.155 nats; Appendix~\ref{app:qwen}); we did not
+run resample-ablation on Qwen2.5.
+
+\textbf{Task specificity does not return.} Under mean-ablation, the
+GPT-2 candidates' contrast against arithmetic gives $p=0.014$ (0.168
+nats versus a random-control mean of 0.021), but against the
+format-matched sequence task the same candidates show no specificity
+($p=0.882$; Section~\ref{sec:rq2}). We therefore do not read the
+arithmetic result as evidence of task specificity.
 
 \begin{table}[t]
   \caption{Robustness to the replacement value ($N=200$ per task; $\Delta$
@@ -591,7 +591,7 @@ of task specificity.
   effects. The last block is the pre-specified resample-ablation analysis
   (discovery $N=99$, held-out $N=100$): held-out $\Delta$ of the stated
   heads, $p$-values against random and layer-matched head sets, and the
-  per-head held-out Pearson $r$ with the other two baselines. Intervals are 95\% percentile-bootstrap CIs over examples;
+  per-head Pearson $r$ with the other two baselines on the discovery split. Intervals are 95\% percentile-bootstrap CIs over examples;
   $^\dagger$5th--95th percentile of 1{,}000 control draws.}
   \label{tab:mean}
   \centering
@@ -621,12 +621,12 @@ of task specificity.
     Resample-selected, held-out $\Delta$ & 0.179 & [0.159, 0.200] & 0.586 & [0.516, 0.659] \\
     \quad $p$: random / layer-matched & \multicolumn{2}{r}{0.001 / 0.001} & \multicolumn{2}{r}{0.001 / 0.001} \\
     Overlap with zero / mean top-5 & \multicolumn{2}{r}{0/5 / 2/5} & \multicolumn{2}{r}{1/5 / 5/5} \\
-    Pearson $r$ with zero / mean & \multicolumn{2}{r}{0.279 / 0.716} & \multicolumn{2}{r}{0.452 / 0.940} \\
+    Pearson $r$ with zero / mean & \multicolumn{2}{r}{0.212 / 0.724} & \multicolumn{2}{r}{0.473 / 0.946} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\subsection{An established circuit task: indirect object identification}
+\subsection{RQ3 on an established circuit task: indirect object identification}
 \label{sec:ioi}
 
 To test whether baseline dependence also arises on a natural-language
@@ -641,6 +641,7 @@ pre-projection location: zero, the discovery-split mean, and a
 \emph{resample} value, the head's activation on the ``ABC'' variant (the
 second subject replaced by a third name) of a different prompt with the
 same template. Selection, controls, and statistics are those of RQ2.
+
 Under every baseline the selected heads exceed both matched controls
 ($p=0.001$ each). The baselines disagree on which heads matter: zero
 shares only 2 of its top-5 heads with mean or with resample, whereas
