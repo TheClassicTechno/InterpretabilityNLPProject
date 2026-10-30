@@ -13,8 +13,12 @@ separates reselected heads from both matched controls (p = 0.001), but on GPT-2 
 zero-ablation set, and the five zero-selected heads' held-out effect falls from 0.412 to 0.005 nats (post hoc). Their zero-ablation
 effect is therefore consistent with an off-distribution replacement rather than the removal of information the task needs. We
 revised the abstract, introduction, discussion, and conclusion accordingly and added a fourth recommendation: report the
-replacement value and check at least one on-distribution baseline. On IOI we also compare zero, mean, and resample ablation (§4.5).
-Noise injection and optimal ablation remain untested, and §5 says so.
+replacement value and check at least one on-distribution baseline. We then tested whether the mean itself was the problem, with a
+resample-ablation analysis specified before it was run: each head's output is replaced by its output on another copying example
+with the same token layout (§4.4, Table 2). On GPT-2 the zero-selected heads' held-out effect is 0.020 nats (p = 0.346 against
+random head sets; 0.005 and 0.011 with two other source assignments), so resample agrees with mean. On DistilGPT2 resample selects
+exactly the mean-ablation heads. On IOI we also compare zero, mean, and resample ablation (§4.5). Noise injection and optimal
+ablation remain untested, and §5 says so.
 
 **Model diversity and libraries.** We added Qwen2.5-1.5B-Instruct, a different architecture family (App. C, Table 4). The projection
 confound recurs (r = 0.108, 0/5 overlap), and the matched-control separation holds under both baselines. §5 now states that DistilGPT2
@@ -51,4 +55,4 @@ crosses 0.05 in 9 of 20 partitions, while the matched-control separation holds i
 - §4.2: a format check shows that GPT-2's arithmetic floor survives removing the answer's leading space; Qwen's does not (0.0% → 23.0%).
 - De-anonymized author block, workshop footer (`final` option), and public code link. The naive hook is identified as this project's
   own original implementation.
-- `scripts/verify_paper_numbers.py` checks 121 printed values against the result files.
+- `scripts/verify_paper_numbers.py` checks 140 printed values against the result files.

@@ -17,7 +17,7 @@
 \item {\bf Limitations}
     \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Section~\ref{sec:discussion} discusses the causal claim's scope and its dependence on the replacement value, the mismatch between the arithmetic control and copying, the ablation baselines not tested (noise, optimal ablation), the model scope (DistilGPT2 is not independent of GPT-2; nothing above 1.5B parameters; partition and sequence-control analyses not run on Qwen2.5), and the reuse of one set of 200 copying examples and a numeral-dominated sequence control.
+    \item[] Justification: Section~\ref{sec:discussion} discusses the causal claim's scope and its dependence on the replacement value, the mismatch between the arithmetic control and copying, the ablation baselines not tested (noise, optimal ablation; resample not run on Qwen2.5), the model scope (DistilGPT2 is not independent of GPT-2; nothing above 1.5B parameters; partition, sequence-control, and copying resample analyses not run on Qwen2.5), and the reuse of one set of 200 copying examples and a numeral-dominated sequence control.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper has no limitation while the answer \answerNo{} means that the paper has limitations, but those are not discussed in the paper. 
@@ -84,7 +84,7 @@
 \item {\bf Experimental setting/details}
     \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer) necessary to understand the results?
     \item[] Answer: \answerYes{}
-    \item[] Justification: No model is trained. Section~\ref{sec:design} gives the split sizes and procedure, fixed top-$k=5$ candidate count, 2{,}000 bootstrap resamples, and 1{,}000 control draws. These settings were fixed before results were inspected; the partition and sequence-control analyses added for the camera-ready version were specified in writing before they were run. Each result file in the public repository records the full configuration used to produce it, including seeds, per-split example counts, and task parameters.
+    \item[] Justification: No model is trained. Section~\ref{sec:design} gives the split sizes and procedure, fixed top-$k=5$ candidate count, 2{,}000 bootstrap resamples, and 1{,}000 control draws. These settings were fixed before results were inspected; the partition, sequence-control, and resample analyses added for the camera-ready version were specified in writing before they were run. Each result file in the public repository records the full configuration used to produce it, including seeds, per-split example counts, and task parameters.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
@@ -112,7 +112,7 @@
 \item {\bf Experiments compute resources}
     \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Section~\ref{sec:design} reports one 10-core Apple M5 CPU, 24~GB unified memory, no GPU, and about 1.5~GB of local storage. Measured wall times and peak resident memory are 198.99~s and 1.94~GiB for the primary GPT-2 pipeline, 57.62~s and 1.90~GiB for DistilGPT2, 428.56~s and 3.22~GiB for GPT-2 at $N=500$, and 301.43~s (1.90~GiB) and 82.08~s (1.63~GiB) for the camera-ready partition and sequence-control analyses on GPT-2 and DistilGPT2. The Qwen2.5-1.5B-Instruct pipeline used 11{,}976 CPU-seconds and 9.0~GiB (Appendix~\ref{app:qwen}). The provenance record lists every run with its command and measurements.
+    \item[] Justification: Section~\ref{sec:design} reports one 10-core Apple M5 CPU, 24~GB unified memory, no GPU, and about 1.5~GB of local storage. Measured wall times and peak resident memory are 198.99~s and 1.94~GiB for the primary GPT-2 pipeline, 57.62~s and 1.90~GiB for DistilGPT2, 428.56~s and 3.22~GiB for GPT-2 at $N=500$, and 301.43~s (1.90~GiB) and 82.08~s (1.63~GiB) for the camera-ready partition and sequence-control analyses on GPT-2 and DistilGPT2, and 914.99~s (2.14~GiB) and 325.98~s (2.10~GiB) for the copying resample analysis. The Qwen2.5-1.5B-Instruct pipeline used 11{,}976 CPU-seconds and 9.0~GiB (Appendix~\ref{app:qwen}). The provenance record lists every run with its command and measurements.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer \answerNA{} means that the paper does not include experiments.
