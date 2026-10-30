@@ -143,5 +143,5 @@ The abstract stays at about its current length: the mean-ablation and specificit
 
 Status 2026-10-30 (resumed session): all items above implemented. Final checks: 29 tests pass; original result hashes unchanged;
 GPT-2 regression and IOI reruns reproduce the saved files apart from timestamp/commit; 121/121 printed values verified; clean build,
-main text ends on p. 8. Remaining, needs the author: commit and push the camera-ready code/results to the public repository the
-paper cites, then upload the PDF.
+main text ends on p. 8. Code, results, and paper were committed and merged into `main` of the public repository the paper cites.
+Remaining, needs the author: upload the PDF and post the reviewer responses.

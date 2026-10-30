@@ -1,6 +1,7 @@
 # Camera-ready revision plan: InterpScience @ NeurIPS 2026 (Submission 112)
 
-Created 2026-10-30. Camera-ready deadline: **2026-11-15 AoE**. Nothing has been changed yet; this file is the plan.
+Created 2026-10-30. Camera-ready deadline: **2026-11-15 AoE**. This file is the original plan, written before any change.
+**Status:** implemented; see `camera_ready_design.md` (the spec that was executed) and its status note.
 
 ## 0. Which file is the paper
 
