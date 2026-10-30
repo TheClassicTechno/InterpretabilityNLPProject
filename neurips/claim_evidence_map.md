@@ -145,7 +145,7 @@ Every value is copied from rows already traced above. Hook placement: r = 0.057 
 
 ## Camera-ready workshop version (`neurips/neurips_2026.tex`, 2026-10-30)
 
-All numbers are checked mechanically by `scripts/verify_paper_numbers.py` (140/140 passed at build).
+All numbers are checked mechanically by `scripts/verify_paper_numbers.py` (142/142 passed at build).
 Workshop locations of results that already have rows above: mean-ablation → §4.4 + Table 2 (`tab:mean`);
 Qwen2.5 → §4.1, §4.2, §4.4, App. C + Table 4 (`tab:qwen`); IOI → §4.5 + App. D + Table 5 (`tab:ioi`).
 
@@ -171,5 +171,5 @@ Qwen2.5 → §4.1, §4.2, §4.4, App. C + Table 4 (`tab:qwen`); IOI → §4.5 + 
 | C3 zero-selected heads under resample (held-out) | `<model>_resample_copying.json` `primary.r1_zero_selected_under_resample.{heldout_delta_mean,heldout_delta_ci95,random_control,layer_matched_control}` | GPT-2 0.020 [0.006, 0.035], random mean 0.015, p=0.346 / 0.430; DistilGPT2 0.201 [0.173, 0.232], p=0.075 / 0.001 | Abstract, §1, §4.4, Table 2 |
 | C3 source-seed sensitivity (GPT-2) | `gpt2_resample_copying.json` `r4_source_sensitivity.r1_heldout_delta_by_seed` | seeds 2/3/4: 0.020 / 0.005 / 0.011; reading A for all seeds, both models | §4.4 |
 | C3 resample-selected heads vs controls | `primary.r2_resample_selected.{heads,heldout_delta_mean,heldout_delta_ci95,random_control,layer_matched_control,overlap_with_zero_selected,overlap_with_mean_selected}` | GPT-2 10.0, 10.11, 10.1, 10.6, 11.2: 0.179 [0.159, 0.200], p=0.001/0.001, overlap 0/5 zero, 2/5 mean; DistilGPT2 0.586 [0.516, 0.659], 1/5 zero, 5/5 mean | §4.4, Table 2 |
-| C3 per-head agreement (held-out Pearson) | `primary.r3_agreement.heldout_resample_vs_{zero,mean}.pearson` | GPT-2 0.279 / 0.716; DistilGPT2 0.452 / 0.940 | §4.4, Table 2 |
+| C3 per-head agreement (discovery-split Pearson, resample N=99) | `primary.r3_agreement.discovery_resample_vs_{zero,mean}.pearson`; zero–mean from `<model>_meanablation_results.json` `mean_ablation.mean_vs_zero.pearson_r_discovery` | GPT-2 resample–zero 0.212, resample–mean 0.724, zero–mean 0.424; DistilGPT2 0.473 / 0.946 / 0.553 (held-out, also saved: GPT-2 0.279 / 0.716; DistilGPT2 0.452 / 0.940) | §4.4, Table 2 |
 | C3 run cost | `/usr/bin/time -l` (see provenance) | GPT-2 914.99 s, 2.14 GiB; DistilGPT2 325.98 s, 2.10 GiB | §3 |

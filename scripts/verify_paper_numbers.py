@@ -180,17 +180,25 @@ for name in ["gpt2", "distilgpt2"]:
     add(f"{name} c3 r2", f"{f3(r2['heldout_delta_mean'])} & [{f3(r2['heldout_delta_ci95'][0])}, {f3(r2['heldout_delta_ci95'][1])}]")
     add(f"{name} c3 r2 p", f"{p3(r2['random_control']['empirical_p'])} / {p3(r2['layer_matched_control']['empirical_p'])}")
     add(f"{name} c3 overlap", f"{r2['overlap_with_zero_selected']}/5 / {r2['overlap_with_mean_selected']}/5")
-    add(f"{name} c3 pearson", f"{f3(r3['heldout_resample_vs_zero']['pearson'])} / {f3(r3['heldout_resample_vs_mean']['pearson'])}")
+    add(f"{name} c3 pearson (discovery)", f"{f3(r3['discovery_resample_vs_zero']['pearson'])} / {f3(r3['discovery_resample_vs_mean']['pearson'])}")
     add(f"{name} c3 runtime", "914.99~s (2.14~GiB)" if name == "gpt2" else "325.98~s (2.10~GiB)")
 grs = load(RES / "gpt2_resample_copying.json")
 g1 = grs["primary"]["r1_zero_selected_under_resample"]
-add("gpt2 c3 r1 text", f"of {f3(g1['heldout_delta_mean'])} nats (CI $[{f3(g1['heldout_delta_ci95'][0])},{f3(g1['heldout_delta_ci95'][1])}]$)")
+add("gpt2 c3 r1 text", f"then {f3(g1['heldout_delta_mean'])} nats (CI $[{f3(g1['heldout_delta_ci95'][0])},{f3(g1['heldout_delta_ci95'][1])}]$)")
 add("gpt2 c3 r1 random", f"(mean {f3(g1['random_control']['mean'])}, $p={p3(g1['random_control']['empirical_p'])}$)")
 sens = grs["r4_source_sensitivity"]["r1_heldout_delta_by_seed"]
-add("gpt2 c3 seeds", f"it is {f3(sens['3'])}\nand {f3(sens['4'])} nats")
+add("gpt2 c3 seeds", f"is {f3(sens['3'])} and {f3(sens['4'])} nats")
+g3 = grs["primary"]["r3_agreement"]
+gm = load(RES / "gpt2_meanablation_results.json")["mean_ablation"]["mean_vs_zero"]
+add("gpt2 c3 mean-resample r", f"$r={f3(g3['discovery_resample_vs_mean']['pearson'])}$")
+add("gpt2 c3 zero r pair", f"only ${f3(gm['pearson_r_discovery'])}$\nand ${f3(g3['discovery_resample_vs_zero']['pearson'])}$")
 assert [list(h) for h in grs["primary"]["r2_resample_selected"]["heads"]] == [[10, 0], [10, 11], [10, 1], [10, 6], [11, 2]]
 drs = load(RES / "distilgpt2_resample_copying.json")["primary"]
-add("distil c3 text", f"keep {f3(drs['r1_zero_selected_under_resample']['heldout_delta_mean'])} nats")
+dz = load(RES / "distilgpt2_results.json")["rq2_candidate_vs_controls"]["candidate_heldout_delta_mean"]
+dr = drs["r1_zero_selected_under_resample"]["heldout_delta_mean"]
+add("distil c3 text", f"{f3(dr)} under resample")
+assert 0.29 < dr / dz < 0.37, "'about a third' must hold for DistilGPT2 resample"
+assert drs["r2_resample_selected"]["overlap_with_mean_selected"] == 5
 add("distil c3 p", f"($p={p3(drs['r1_zero_selected_under_resample']['random_control']['empirical_p'])}$)")
 
 failed = [(lab, s) for lab, s in checks if s not in TEX]
