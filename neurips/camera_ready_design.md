@@ -163,4 +163,7 @@ The abstract stays at about its current length: the mean-ablation and specificit
 Status 2026-10-30 (resumed session): all items above implemented. Final checks: 29 tests pass; original result hashes unchanged;
 GPT-2 regression and IOI reruns reproduce the saved files apart from timestamp/commit; 121/121 printed values verified; clean build,
 main text ends on p. 8. Code, results, and paper were committed and merged into `main` of the public repository the paper cites.
+C3 (resample on copying) was then pre-specified (commit 584f871), run once per model, and reported: reading (A) for all
+three source seeds on both models. GPT-2: zero-selected heads 0.020 nats under resample (p_random = 0.346). DistilGPT2: 0.201
+nats (p_random = 0.075, p_layer = 0.001); resample selects exactly the mean-ablation heads. Integrated into §3, §4.4, Table 2, §5.
 Remaining, needs the author: upload the PDF and post the reviewer responses.

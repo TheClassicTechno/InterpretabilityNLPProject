@@ -44,7 +44,9 @@ control task:
 4. **The replacement value changes which heads are selected.** Under
    mean-ablation the five zero-selected GPT-2 heads have almost no held-out
    effect (0.005 vs. 0.412 nats, post hoc), and reselection yields a disjoint
-   set that still beats both controls. On indirect object identification,
+   set that still beats both controls. A pre-specified resample-ablation
+   check agrees: under resample the same heads keep 0.020 nats (p=0.346
+   against random head sets). On indirect object identification,
    zero-ablation shares only 2 of its top-5 heads with mean or resample
    ablation.
 
@@ -168,6 +170,16 @@ python scripts/run_camera_ready_robustness.py --model gpt2 \
   --output neurips/experiment_results/reproduced_gpt2_camera_ready_robustness.json
 python scripts/run_camera_ready_robustness.py --model distilgpt2 \
   --output neurips/experiment_results/reproduced_distilgpt2_camera_ready_robustness.json
+```
+
+Resample ablation on the copying task (C3), pre-specified in the same design
+file (Section 4.4, Table 2; about 15 min for GPT-2 and 5 min for DistilGPT2):
+
+```bash
+python scripts/run_resample_copying.py --model gpt2 \
+  --output neurips/experiment_results/reproduced_gpt2_resample_copying.json
+python scripts/run_resample_copying.py --model distilgpt2 \
+  --output neurips/experiment_results/reproduced_distilgpt2_resample_copying.json
 ```
 
 Check every value printed in the paper against the saved result files:
