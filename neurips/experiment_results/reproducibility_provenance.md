@@ -234,7 +234,7 @@ Verification performed 2026-10-30 before the camera-ready numbers were trusted:
 - Hashes of all pre-existing result files (sections above and `results/naacl_ioi/*.json`) were recorded before the camera-ready work
   and are unchanged after it.
 - `pytest tests/`: 29 passed (includes `tests/test_sequence_control.py`).
-- `scripts/verify_paper_numbers.py`: 121/121 printed values match the result files.
+- `scripts/verify_paper_numbers.py`: 121/121 printed values match the result files (140/140 after C3 below).
 
 | File | SHA-256 |
 |---|---|
@@ -245,3 +245,28 @@ Verification performed 2026-10-30 before the camera-ready numbers were trusted:
 | `src/ablation.py` | `e788f80e448453e118bf4dc8732e5967425355b4748c350a6ecbd99e012aa9c6` |
 | `tests/test_sequence_control.py` | `07f027c55b9f2b822dd15142dff27983da6cb503ada628a4f98eb2d4d9c15a0c` |
 | `scripts/verify_paper_numbers.py` | `c86c4b25cfb7670c2e220d3763db8b92c094079927db164bd7e27311ce6753de` |
+
+## C3: resample ablation on the copying task (added 2026-10-30)
+
+Design committed and pushed before any code was written or run: `neurips/camera_ready_design.md` (Sec. 3, C3), commit `584f871`.
+Same machine and environment. Measured with `/usr/bin/time -l`.
+
+| Run | Command | Wall time | Peak RSS | Output |
+|---|---|---|---|---|
+| C3, GPT-2 | `python scripts/run_resample_copying.py --model gpt2` | 914.99 s (in-script 911.26 s) | 2,297,217,024 B (2.14 GiB) | `gpt2_resample_copying.json` |
+| C3, DistilGPT2 | `python scripts/run_resample_copying.py --model distilgpt2` | 325.98 s (in-script 323.72 s) | 2,258,468,864 B (2.10 GiB) | `distilgpt2_resample_copying.json` |
+
+Built-in sanity checks, both models: unablated per-example log-probs equal the saved baseline (max abs deviation 0.0);
+resampling a head from the target itself changes nothing (max abs Δ 0.0); source and target batches have identical shapes,
+attention masks, and answer spans. Discovery example 63 (first word splits into 3 tokens) has no same-layout partner and is
+excluded (discovery N = 99, held-out N = 100). Each run was performed once. Pre-specified reading of R1: (A) for all three
+source seeds on both models. After the run: `pytest tests/` 33 passed; `scripts/verify_paper_numbers.py` 140/140.
+
+| File | SHA-256 |
+|---|---|
+| `gpt2_resample_copying.json` | `80a580129cede50246818e8c804689359c21b0186ea3d223ff1ba319bd5972de` |
+| `distilgpt2_resample_copying.json` | `02467e4859150a9a9d145d85c973e1cbfe07769bf7ca70e431ab079ef91bf5db` |
+| `scripts/run_resample_copying.py` | `75c747353a52c263931e97a74a2b7224f07ee3c2fdfa1b9994a310ec3634f989` |
+| `src/ablation.py` (adds source matching) | `3bbab0c5dc3ec9d28d990605cc6780706bc16cb32db5d1ad6c519f5d37f7e56e` |
+| `tests/test_resample_ablation.py` | `e54aa9232cba9e57aecbbf1d02b772bb909703781fd6d25c9754a234bbae29b1` |
+| `scripts/verify_paper_numbers.py` (adds C3 checks) | `e34dab97bb4c9ced2e00fce9edafbd3d953174c929a24a4a48fbc04d0d469ccb` |

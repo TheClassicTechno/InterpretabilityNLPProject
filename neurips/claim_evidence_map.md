@@ -145,7 +145,7 @@ Every value is copied from rows already traced above. Hook placement: r = 0.057 
 
 ## Camera-ready workshop version (`neurips/neurips_2026.tex`, 2026-10-30)
 
-All numbers are checked mechanically by `scripts/verify_paper_numbers.py` (121/121 passed at build).
+All numbers are checked mechanically by `scripts/verify_paper_numbers.py` (140/140 passed at build).
 Workshop locations of results that already have rows above: mean-ablation → §4.4 + Table 2 (`tab:mean`);
 Qwen2.5 → §4.1, §4.2, §4.4, App. C + Table 4 (`tab:qwen`); IOI → §4.5 + App. D + Table 5 (`tab:ioi`).
 
@@ -168,3 +168,8 @@ Qwen2.5 → §4.1, §4.2, §4.4, App. C + Table 4 (`tab:qwen`); IOI → §4.5 + 
 | C1 arithmetic specificity | `c1_partition_sensitivity.{arith_specificity,p_arith_specificity,n_partitions_p_arith_specificity_le_0.05}` | GPT-2 9/20, median p=0.054 [0.039, 0.650]; DistilGPT2 20/20, p=0.001 | §4.3, Table 6 |
 | C1/C2 run cost | `/usr/bin/time -l` (see provenance) | GPT-2 301.43 s, 1.90 GiB; DistilGPT2 82.08 s, 1.63 GiB | §3 |
 | Qwen run cost | `reproducibility_provenance.md` | 11,975.83 CPU-s, 9.0 GiB | App. C |
+| C3 zero-selected heads under resample (held-out) | `<model>_resample_copying.json` `primary.r1_zero_selected_under_resample.{heldout_delta_mean,heldout_delta_ci95,random_control,layer_matched_control}` | GPT-2 0.020 [0.006, 0.035], random mean 0.015, p=0.346 / 0.430; DistilGPT2 0.201 [0.173, 0.232], p=0.075 / 0.001 | Abstract, §1, §4.4, Table 2 |
+| C3 source-seed sensitivity (GPT-2) | `gpt2_resample_copying.json` `r4_source_sensitivity.r1_heldout_delta_by_seed` | seeds 2/3/4: 0.020 / 0.005 / 0.011; reading A for all seeds, both models | §4.4 |
+| C3 resample-selected heads vs controls | `primary.r2_resample_selected.{heads,heldout_delta_mean,heldout_delta_ci95,random_control,layer_matched_control,overlap_with_zero_selected,overlap_with_mean_selected}` | GPT-2 10.0, 10.11, 10.1, 10.6, 11.2: 0.179 [0.159, 0.200], p=0.001/0.001, overlap 0/5 zero, 2/5 mean; DistilGPT2 0.586 [0.516, 0.659], 1/5 zero, 5/5 mean | §4.4, Table 2 |
+| C3 per-head agreement (held-out Pearson) | `primary.r3_agreement.heldout_resample_vs_{zero,mean}.pearson` | GPT-2 0.279 / 0.716; DistilGPT2 0.452 / 0.940 | §4.4, Table 2 |
+| C3 run cost | `/usr/bin/time -l` (see provenance) | GPT-2 914.99 s, 2.14 GiB; DistilGPT2 325.98 s, 2.10 GiB | §3 |
