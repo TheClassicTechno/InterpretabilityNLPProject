@@ -437,8 +437,11 @@ nats, far more than random head sets do (mean 0.051, $p=0.001$) and as
 much as it lowers held-out copying. Their specificity against this
 control is $-0.035$ nats (random-control mean $-0.023$, $p=0.567$), and
 the candidates selected under mean-ablation behave the same way
-($-0.138$ nats, $p=0.882$). On GPT-2, the selected heads' effect is
-therefore not specific to in-context copying under either baseline.
+($-0.138$ nats, $p=0.882$). On GPT-2, we therefore find no evidence
+under either baseline that the selected heads' effect is specific to
+in-context copying: they harm the format-matched task at least as much.
+A null contrast against one control task does not, however, rule out
+specificity relative to other tasks.
 DistilGPT2 differs. Its candidates lower the sequence task by only 0.113
 nats, no more than random head sets (mean 0.107, $p=0.280$), so their
 specificity is 0.472 nats ($p=0.001$; mean-ablation candidates 0.382,
