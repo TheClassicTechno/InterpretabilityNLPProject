@@ -11,6 +11,7 @@ Target file: **`neurips/neurips_2026.tex`**. Deadline: 2026-11-15 AoE.
 | 2 | Port the Qwen2.5-1.5B-Instruct replication and the GPT-2 IOI (zero/mean/resample) results |
 | 3 | Run both new experiments: C1 (split stability) and C2 (format-matched control task) |
 | 4 | Author block: Juli Huang, Stanford University, `julih@stanford.edu` |
+| 5 | (added later 2026-10-30) Run resample ablation on the copying task (C3). Noise ablation, Greater-Than, and >1.5B models stay stated limitations |
 
 ## 1. Invariants (must hold at the end)
 
@@ -109,6 +110,24 @@ Output: `neurips/experiment_results/<model>_camera_ready_robustness.json`. Qwen 
 | Secondary | The same contrast for the mean-ablation candidates under mean-ablation, with means taken from the copying discovery split, as in the existing pipeline. |
 | Interpretation | p ≥ 0.05 → the copying-vs-arithmetic advantage is not specific relative to a format-matched task, which further weakens specificity. p < 0.05 → the effect is larger on in-context copying than on format-matched sequence continuation. That is evidence of a task-dependent effect, not of an induction mechanism. Both outcomes are reported regardless. |
 | Confounds | The sequence task is dominated by numerals (92/129). The baseline is close but not identical. The two tasks share the "." token and short-sequence structure. Induction-like heads might still help predict sequence order. |
+
+#### C3: Resample ablation on the copying task (added 2026-10-30, decision 5; written before any code or run)
+
+| Field | Spec |
+|---|---|
+| Question | Is the GPT-2 collapse of the zero-selected heads' effect under mean-ablation (0.412 → 0.005 nats) caused by zero being off-distribution, or by the mean being an unusual replacement value? |
+| H1 (paper's current reading) | Zero-ablation inflates these heads' effect; an on-distribution replacement also removes most of it |
+| Competing | The position-pooled mean is itself an atypical value; an activation the head actually produces on another copying example restores the effect |
+| Intervention | Same pre-projection location. Head h's slice of the `c_proj` input is replaced, at every position, by its value on a *source* copying example (the source's own question + answer, a separate forward pass). The source carries no information about the target's words. |
+| Source matching | Copying prompts differ only in how many tokens the first word takes (1, 2 or 3); every later word, the period, and the answer are one token. Source must have the identical per-word token signature (so every position plays the same role) and come from the **same split** as the target, and must not be the target. Drawn uniformly with `np.random.default_rng(seed)` (primary seed 2, as in IOI). The single discovery example whose first word is 3 tokens has no partner in either split and is excluded from the resample analysis (discovery N = 99; held-out N = 100). |
+| Primary statistic (R1) | Mean held-out resample Δ of the five **zero-selected** candidates, 95% bootstrap CI (2,000 resamples, seed 3), against the resample random-control distribution (1,000 draws, seed 42) and the layer-matched control for that set (seed 43); one-sided Monte Carlo p. |
+| Pre-specified reading of R1 | (A) p_random > 0.05 → resample agrees with mean: the zero-selected heads' effect is not reproduced by on-distribution replacement. (B) p_random ≤ 0.05 and Δ ≥ 0.206 (half the zero effect) → resample largely restores the effect; the mean-ablation collapse reflects the mean value and §4.4 must be revised. (C) p_random ≤ 0.05 and Δ < 0.206 → partial: the effect exceeds random heads but is less than half the zero effect. The threshold is arbitrary but fixed now; the numbers are reported regardless. |
+| Secondary (R2) | Full RQ2 under resample: top-5 on resample discovery Δ, held-out Δ vs random and layer-matched controls, rank stability ρ, overlap with zero- and mean-selected sets. |
+| Secondary (R3) | Agreement of per-head Δ (Pearson, Spearman, top-5 overlap) resample vs zero and resample vs mean, on held-out (N = 100 for all three) and discovery (resample N = 99 vs saved N = 100). |
+| Source sensitivity (R4) | Repeat R1 and R2 with source seeds 3 and 4; report the range of the R1 Δ and of the reselected heads. The paper uses seed 2. |
+| Sanity checks (abort on failure) | (i) Resampling a head from the target itself changes no log-prob (max abs Δ < 1e-5) for 5 heads; (ii) unablated per-example copying log-probs equal the saved baseline within 1e-4 nats; (iii) source and target batches have identical shapes and attention masks. |
+| Not done | Arithmetic or sequence-control specificity under resample (needs separately matched sources; out of scope). Qwen (cost). |
+| Models / output | GPT-2 and DistilGPT2. `scripts/run_resample_copying.py --model {gpt2,distilgpt2}` → `neurips/experiment_results/<model>_resample_copying.json` (never overwrites). Zero and mean per-head Δ are read from the saved result files, not recomputed. |
 
 ## 4. Paper structure after the changes (target main text ≤ 9 pp)
 
