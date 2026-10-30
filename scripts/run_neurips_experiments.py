@@ -84,8 +84,79 @@ def jsonable_head_dict(d):
     return {f"{layer}_{head}": v for (layer, head), v in d.items()}
 
 
+def rq2_statistics(all_heads, num_heads, delta_disc, delta_held, delta_ctrl, delta_held_arrays):
+    """Candidate selection on discovery, held-out comparison against matched
+    random / layer-matched controls, rank stability, and specificity.
+    Shared by the zero- and mean-ablation pipelines."""
+    candidate_heads = sorted(all_heads, key=lambda h: delta_disc[h], reverse=True)[:TOP_K]
+    print(f"  Candidate heads (top-{TOP_K} by discovery delta): {candidate_heads}")
+
+    # Rank stability: discovery vs held-out, over all 144 heads
+    rank_stability_spearman = spearman_rank_correlation(delta_disc, delta_held)
+    print(f"  Spearman(discovery_delta, heldout_delta) over all heads = {rank_stability_spearman:.3f}")
+
+    # Candidate effect on held-out (bootstrap over held-out examples, averaged across candidate heads)
+    candidate_per_example_held = np.mean(
+        [delta_held_arrays[h] for h in candidate_heads], axis=0
+    )
+    cand_mean, cand_lo, cand_hi = bootstrap_mean_ci(list(candidate_per_example_held), N_BOOTSTRAP, seed=3)
+    print(f"  Candidate held-out delta: {cand_mean:.4f} [{cand_lo:.4f},{cand_hi:.4f}]")
+
+    # Matched random-head control distribution, evaluated on held-out
+    random_draws = sample_random_head_sets(all_heads, TOP_K, N_CONTROL_DRAWS, seed=CONTROL_SAMPLING_SEED)
+    random_control_held = [mean_effect_for_head_set(delta_held, draw) for draw in random_draws]
+    random_p = empirical_percentile(cand_mean, random_control_held)
+    print(f"  Random-control held-out delta: mean={np.mean(random_control_held):.4f} "
+          f"[{np.percentile(random_control_held, 5):.4f},{np.percentile(random_control_held, 95):.4f}] "
+          f"| P(random >= candidate) = {random_p:.4f}")
+
+    # Layer-matched control distribution, evaluated on held-out
+    layer_draws = sample_layer_matched_head_sets(candidate_heads, num_heads, N_CONTROL_DRAWS, seed=CONTROL_SAMPLING_SEED + 1)
+    layer_control_held = [mean_effect_for_head_set(delta_held, draw) for draw in layer_draws]
+    layer_p = empirical_percentile(cand_mean, layer_control_held)
+    print(f"  Layer-matched control held-out delta: mean={np.mean(layer_control_held):.4f} "
+          f"[{np.percentile(layer_control_held, 5):.4f},{np.percentile(layer_control_held, 95):.4f}] "
+          f"| P(layer-matched >= candidate) = {layer_p:.4f}")
+
+    # Specificity: candidate vs. random, target-task delta minus control-task delta
+    candidate_specificity = specificity_statistic(delta_held, delta_ctrl, candidate_heads)
+    random_specificity = [specificity_statistic(delta_held, delta_ctrl, draw) for draw in random_draws]
+    specificity_p = empirical_percentile(candidate_specificity, random_specificity)
+    print(f"  Candidate specificity (held-out delta - control delta) = {candidate_specificity:.4f}")
+    print(f"  Random-control specificity: mean={np.mean(random_specificity):.4f} "
+          f"| P(random >= candidate) = {specificity_p:.4f}")
+    return {
+        "candidate_heads": [list(h) for h in candidate_heads],
+        "candidate_discovery_delta": {f"{l}_{h}": delta_disc[(l, h)] for (l, h) in candidate_heads},
+        "candidate_heldout_delta_mean": cand_mean,
+        "candidate_heldout_delta_ci95": [cand_lo, cand_hi],
+        "random_control_heldout_delta": {
+            "mean": float(np.mean(random_control_held)),
+            "p5": float(np.percentile(random_control_held, 5)),
+            "p95": float(np.percentile(random_control_held, 95)),
+            "n_draws": N_CONTROL_DRAWS,
+            "empirical_p_candidate_beats_random": random_p,
+        },
+        "layer_matched_control_heldout_delta": {
+            "mean": float(np.mean(layer_control_held)),
+            "p5": float(np.percentile(layer_control_held, 5)),
+            "p95": float(np.percentile(layer_control_held, 95)),
+            "n_draws": N_CONTROL_DRAWS,
+            "empirical_p_candidate_beats_layer_matched": layer_p,
+        },
+        "rank_stability_spearman_discovery_vs_heldout": rank_stability_spearman,
+        "specificity": {
+            "candidate": candidate_specificity,
+            "random_control_mean": float(np.mean(random_specificity)),
+            "random_control_p5": float(np.percentile(random_specificity, 5)),
+            "random_control_p95": float(np.percentile(random_specificity, 95)),
+            "empirical_p_candidate_beats_random": specificity_p,
+        },
+    }
+
+
 def run(model_name: str, output_path: Path, n_induction: int = N_INDUCTION, n_arithmetic: int = N_ARITHMETIC,
-        arithmetic_max_operand: int = 20):
+        arithmetic_max_operand: int = 20, ablation: str = "zero"):
     print(f"\n{'=' * 70}\nRunning pipeline for {model_name} (n_induction={n_induction}, n_arithmetic={n_arithmetic})\n{'=' * 70}")
 
     loader = ModelLoader(model_name)
@@ -173,43 +244,48 @@ def run(model_name: str, output_path: Path, n_induction: int = N_INDUCTION, n_ar
     delta_ctrl = per_head_delta_means(base_ctrl, effects_ctrl)
     delta_held_arrays = per_head_delta_arrays(base_held, effects_held)
 
-    candidate_heads = sorted(all_heads, key=lambda h: delta_disc[h], reverse=True)[:TOP_K]
-    print(f"  Candidate heads (top-{TOP_K} by discovery delta): {candidate_heads}")
+    rq2 = rq2_statistics(all_heads, num_heads, delta_disc, delta_held, delta_ctrl, delta_held_arrays)
 
-    # Rank stability: discovery vs held-out, over all 144 heads
-    rank_stability_spearman = spearman_rank_correlation(delta_disc, delta_held)
-    print(f"  Spearman(discovery_delta, heldout_delta) over all heads = {rank_stability_spearman:.3f}")
+    # ---- Robustness: mean ablation (only with --ablation mean) -----------
+    mean_ablation = None
+    if ablation == "mean":
+        print("\n[mean ablation] Reference means from the discovery split (non-padding positions); "
+              "the same means are applied on every split...")
+        means = ablator.compute_head_means(disc_q, disc_a)
+        base_disc_m, eff_disc_m = ablator.compute_all_head_effects(disc_q, disc_a, "mean_ablation", means)
+        base_held_m, eff_held_m = ablator.compute_all_head_effects(held_q, held_a, "mean_ablation", means)
+        base_ctrl_m, eff_ctrl_m = ablator.compute_all_head_effects(arith_q, arith_a, "mean_ablation", means)
+        assert np.allclose(base_disc_m, base_disc), "baseline should not depend on ablation method"
 
-    # Candidate effect on held-out (bootstrap over held-out examples, averaged across candidate heads)
-    candidate_per_example_held = np.mean(
-        [delta_held_arrays[h] for h in candidate_heads], axis=0
-    )
-    cand_mean, cand_lo, cand_hi = bootstrap_mean_ci(list(candidate_per_example_held), N_BOOTSTRAP, seed=3)
-    print(f"  Candidate held-out delta: {cand_mean:.4f} [{cand_lo:.4f},{cand_hi:.4f}]")
+        m_disc = per_head_delta_means(base_disc_m, eff_disc_m)
+        m_held = per_head_delta_means(base_held_m, eff_held_m)
+        m_ctrl = per_head_delta_means(base_ctrl_m, eff_ctrl_m)
+        m_held_arrays = per_head_delta_arrays(base_held_m, eff_held_m)
+        rq2_mean = rq2_statistics(all_heads, num_heads, m_disc, m_held, m_ctrl, m_held_arrays)
 
-    # Matched random-head control distribution, evaluated on held-out
-    random_draws = sample_random_head_sets(all_heads, TOP_K, N_CONTROL_DRAWS, seed=CONTROL_SAMPLING_SEED)
-    random_control_held = [mean_effect_for_head_set(delta_held, draw) for draw in random_draws]
-    random_p = empirical_percentile(cand_mean, random_control_held)
-    print(f"  Random-control held-out delta: mean={np.mean(random_control_held):.4f} "
-          f"[{np.percentile(random_control_held, 5):.4f},{np.percentile(random_control_held, 95):.4f}] "
-          f"| P(random >= candidate) = {random_p:.4f}")
-
-    # Layer-matched control distribution, evaluated on held-out
-    layer_draws = sample_layer_matched_head_sets(candidate_heads, num_heads, N_CONTROL_DRAWS, seed=CONTROL_SAMPLING_SEED + 1)
-    layer_control_held = [mean_effect_for_head_set(delta_held, draw) for draw in layer_draws]
-    layer_p = empirical_percentile(cand_mean, layer_control_held)
-    print(f"  Layer-matched control held-out delta: mean={np.mean(layer_control_held):.4f} "
-          f"[{np.percentile(layer_control_held, 5):.4f},{np.percentile(layer_control_held, 95):.4f}] "
-          f"| P(layer-matched >= candidate) = {layer_p:.4f}")
-
-    # Specificity: candidate vs. random, target-task delta minus control-task delta
-    candidate_specificity = specificity_statistic(delta_held, delta_ctrl, candidate_heads)
-    random_specificity = [specificity_statistic(delta_held, delta_ctrl, draw) for draw in random_draws]
-    specificity_p = empirical_percentile(candidate_specificity, random_specificity)
-    print(f"  Candidate specificity (held-out delta - control delta) = {candidate_specificity:.4f}")
-    print(f"  Random-control specificity: mean={np.mean(random_specificity):.4f} "
-          f"| P(random >= candidate) = {specificity_p:.4f}")
+        zero_vec = np.array([delta_disc[h] for h in all_heads])
+        mean_vec = np.array([m_disc[h] for h in all_heads])
+        top_zero = set(tuple(h) for h in rq2["candidate_heads"])
+        top_mean = set(tuple(h) for h in rq2_mean["candidate_heads"])
+        mean_vs_zero = {
+            "pearson_r_discovery": float(np.corrcoef(zero_vec, mean_vec)[0, 1]),
+            "spearman_rho_discovery": spearman_rank_correlation(delta_disc, m_disc),
+            "top5_overlap_with_zero_candidates": len(top_zero & top_mean),
+        }
+        print(f"  zero vs mean (discovery): Pearson r={mean_vs_zero['pearson_r_discovery']:.3f} "
+              f"Spearman rho={mean_vs_zero['spearman_rho_discovery']:.3f} "
+              f"top-{TOP_K} overlap={mean_vs_zero['top5_overlap_with_zero_candidates']}/{TOP_K}")
+        mean_ablation = {
+            "reference_split": "induction_discovery",
+            "reference_positions": "all non-padding token positions",
+            "mean_vs_zero": mean_vs_zero,
+            "rq2_candidate_vs_controls": {
+                **rq2_mean,
+                "per_head_delta_discovery": jsonable_head_dict(m_disc),
+                "per_head_delta_heldout": jsonable_head_dict(m_held),
+                "per_head_delta_control": jsonable_head_dict(m_ctrl),
+            },
+        }
 
     # ---- Assemble results ----------------------------------------------
     results = {
@@ -248,37 +324,16 @@ def run(model_name: str, output_path: Path, n_induction: int = N_INDUCTION, n_ar
             "per_head_delta_naive": jsonable_head_dict(delta_naive_disc),
         },
         "rq2_candidate_vs_controls": {
-            "candidate_heads": [list(h) for h in candidate_heads],
-            "candidate_discovery_delta": {f"{l}_{h}": delta_disc[(l, h)] for (l, h) in candidate_heads},
-            "candidate_heldout_delta_mean": cand_mean,
-            "candidate_heldout_delta_ci95": [cand_lo, cand_hi],
-            "random_control_heldout_delta": {
-                "mean": float(np.mean(random_control_held)),
-                "p5": float(np.percentile(random_control_held, 5)),
-                "p95": float(np.percentile(random_control_held, 95)),
-                "n_draws": N_CONTROL_DRAWS,
-                "empirical_p_candidate_beats_random": random_p,
-            },
-            "layer_matched_control_heldout_delta": {
-                "mean": float(np.mean(layer_control_held)),
-                "p5": float(np.percentile(layer_control_held, 5)),
-                "p95": float(np.percentile(layer_control_held, 95)),
-                "n_draws": N_CONTROL_DRAWS,
-                "empirical_p_candidate_beats_layer_matched": layer_p,
-            },
-            "rank_stability_spearman_discovery_vs_heldout": rank_stability_spearman,
-            "specificity": {
-                "candidate": candidate_specificity,
-                "random_control_mean": float(np.mean(random_specificity)),
-                "random_control_p5": float(np.percentile(random_specificity, 5)),
-                "random_control_p95": float(np.percentile(random_specificity, 95)),
-                "empirical_p_candidate_beats_random": specificity_p,
-            },
+            **rq2,
             "per_head_delta_discovery": jsonable_head_dict(delta_disc),
             "per_head_delta_heldout": jsonable_head_dict(delta_held),
             "per_head_delta_control": jsonable_head_dict(delta_ctrl),
         },
     }
+
+    if mean_ablation is not None:
+        results["config"]["ablation_baseline"] = "mean"
+        results["mean_ablation"] = mean_ablation
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
@@ -294,8 +349,13 @@ if __name__ == "__main__":
     parser.add_argument("--n-induction", type=int, default=N_INDUCTION)
     parser.add_argument("--n-arithmetic", type=int, default=N_ARITHMETIC)
     parser.add_argument("--arithmetic-max-operand", type=int, default=20)
+    parser.add_argument("--ablation", choices=["zero", "mean"], default="zero",
+                        help="'mean' additionally runs the mean-ablation robustness check")
     args = parser.parse_args()
 
-    out = Path(args.output) if args.output else Path(__file__).resolve().parents[1] / "neurips" / "experiment_results" / f"{args.model}_results.json"
+    suffix = "_meanablation_results.json" if args.ablation == "mean" else "_results.json"
+    out = Path(args.output) if args.output else Path(__file__).resolve().parents[1] / "neurips" / "experiment_results" / f"{args.model}{suffix}"
+    if args.output is None and args.ablation == "mean" and out.exists():
+        raise SystemExit(f"Refusing to overwrite existing {out}")
     run(args.model, out, n_induction=args.n_induction, n_arithmetic=args.n_arithmetic,
-        arithmetic_max_operand=args.arithmetic_max_operand)
+        arithmetic_max_operand=args.arithmetic_max_operand, ablation=args.ablation)
