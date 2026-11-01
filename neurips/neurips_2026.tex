@@ -699,7 +699,9 @@ sequence-control, and copying resample analyses were run on GPT-2 and
 DistilGPT2 only, because
 one Qwen pipeline run took 3.3 CPU-hours.
 
-\textbf{Partitions and sample size.} The partition analysis reuses the
+\textbf{Tasks, partitions, and sample size.} IOI is the only established
+circuit task we tested. We did not test others, such as Greater-Than
+\citep{hanna2023greaterthan}. The partition analysis reuses the
 same 200 copying examples and uses zero-ablation only. The sequence
 control has 129 examples, 92 of them numerals.
 
