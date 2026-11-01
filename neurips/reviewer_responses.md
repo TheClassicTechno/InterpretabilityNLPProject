@@ -29,7 +29,7 @@ placement occurs.
 
 **Task simplicity.** §3 now explains why the tasks are deliberately simple. We added IOI on GPT-2, using the published templates
 (§4.5, App. D). Under all three baselines the selected heads exceed both controls, but zero-ablation shares only 2 of its top-5 heads
-with mean or resample ablation. Greater-Than was not tested.
+with mean or resample ablation. Greater-Than was not tested, and §5 now says so.
 
 ## Response to Reviewer E5js
 
@@ -55,4 +55,4 @@ crosses 0.05 in 9 of 20 partitions, while the matched-control separation holds i
 - §4.2: a format check shows that GPT-2's arithmetic floor survives removing the answer's leading space; Qwen's does not (0.0% → 23.0%).
 - De-anonymized author block, workshop footer (`final` option), and public code link. The naive hook is identified as this project's
   own original implementation.
-- `scripts/verify_paper_numbers.py` checks 140 printed values against the result files.
+- `scripts/verify_paper_numbers.py` checks 142 printed values against the result files.

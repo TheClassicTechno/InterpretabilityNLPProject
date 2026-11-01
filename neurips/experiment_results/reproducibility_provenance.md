@@ -270,3 +270,4 @@ source seeds on both models. After the run: `pytest tests/` 33 passed; `scripts/
 | `src/ablation.py` (adds source matching) | `3bbab0c5dc3ec9d28d990605cc6780706bc16cb32db5d1ad6c519f5d37f7e56e` |
 | `tests/test_resample_ablation.py` | `e54aa9232cba9e57aecbbf1d02b772bb909703781fd6d25c9754a234bbae29b1` |
 | `scripts/verify_paper_numbers.py` (adds C3 checks) | `e34dab97bb4c9ced2e00fce9edafbd3d953174c929a24a4a48fbc04d0d469ccb` |
+| `scripts/verify_paper_numbers.py` (current; updated for the restructured Sec. 4.4, 142 checks) | `d759432540a24077027bbf6b1878aecfc5e1fa17fb785c9e3b6c3acba5c0381d` |

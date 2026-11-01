@@ -73,8 +73,9 @@ python -m pip install -r requirements.txt
 
 The experiments run on CPU or CUDA. The reported measurements used one
 10-core Apple M5 CPU with 24 GB unified memory and no GPU. No model weights
-or datasets are stored in this repository: GPT-2 and DistilGPT2 are
-downloaded from Hugging Face on first use, and both tasks are generated in
+or datasets are stored in this repository:
+GPT-2, DistilGPT2, and Qwen2.5-1.5B-Instruct are
+downloaded from Hugging Face on first use, and all tasks are generated in
 memory by `src/dataset.py` from the seeds recorded in each result file.
 Exact model revisions and weight hashes are in
 `neurips/experiment_results/reproducibility_provenance.md`.
@@ -85,12 +86,17 @@ Exact model revisions and weight hashes are in
 python -m unittest discover -s tests -v
 ```
 
-All 13 tests should pass in under a second, with no model download. They
+All 33 tests should pass in a few seconds, with no model download. They
 check that the corrected pre-hook zeroes exactly one head's slice of the
 output-projection input and nothing else, that removing the hook restores
 the unablated output, that the naive hook changes the logits while leaving
 that input untouched, and that the layer-matched control and the
-finite-sample Monte Carlo correction are built correctly.
+finite-sample Monte Carlo correction are built correctly. The camera-ready
+tests also check that the resample hook replaces only the target head's
+slice, that resample sources share the target's token layout and split and
+are never the target itself, that the IOI prompts align, and that the
+sequence-continuation control matches the copying template without
+revealing its answer.
 
 ## Reproduce each reported run
 
@@ -258,5 +264,6 @@ are not the basis for any claim in the paper.
 ## Third-party assets
 
 The pretrained models are third-party assets under their own terms: GPT-2
-under the MIT License and DistilGPT2 under the Apache License 2.0. Hugging
+under the MIT License, and DistilGPT2 and Qwen2.5-1.5B-Instruct under the
+Apache License 2.0. Hugging
 Face `transformers` is used under the Apache License 2.0.
