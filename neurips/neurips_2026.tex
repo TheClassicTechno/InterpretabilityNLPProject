@@ -70,7 +70,8 @@ $p=0.274$ at $N=500$), and against a format-matched sequence-continuation
 control it disappears ($p=0.567$). A single-head ablation result is not
 self-certifying. It requires verified projection semantics, a continuous
 metric away from floor and ceiling, held-out matched controls, and a
-stated replacement value checked against an on-distribution baseline.
+stated replacement value checked against an alternative, such as
+resampling activations the head actually produces.
 \end{abstract}
 
 
@@ -137,14 +138,16 @@ nats), and reselection yields sets that share no head with them. On IOI, zero-ab
 with mean or resample ablation. Baseline dependence is partial on
 DistilGPT2 and small on Qwen2.5, so it must be checked per model.
 
-Our contribution is a worked, fully reproducible example (code, seeds,
-and every number traceable to a saved result file) showing that a
+Our contribution is a worked example, with public code and seeds and
+every number read from a saved result file (reruns from the public
+repository reproduce the primary result files exactly; Section~\ref{sec:design}), showing that a
 positive \emph{or} null single-head ablation result is not
 self-certifying: a causal interpretation additionally requires (i)
 verifying the intervention's projection semantics, (ii) a continuous
 metric that is not saturated, (iii) matched controls evaluated on
 data not used for head selection, and (iv) a stated replacement value
-checked against at least one on-distribution baseline.
+checked against at least one alternative, preferably resample-ablation,
+which uses activations the head actually produces.
 
 
 \section{Why naive head ablation can mislead}
@@ -325,7 +328,10 @@ contrast.
 
 \textbf{Statistics.} Where applicable, example-level point estimates are
 reported with percentile-bootstrap 95\% confidence intervals (CIs;
-2{,}000 resamples over examples). Control ranges are the 5th--95th
+2{,}000 resamples over examples). An accuracy of 0 is the exception:
+when every example fails, every bootstrap resample does too and the
+interval collapses to $[0,0]$, so we report the exact (Clopper--Pearson)
+binomial interval instead. Control ranges are the 5th--95th
 percentiles of 1{,}000 draws. One-sided Monte Carlo $p$-values use the
 finite-sample correction $(k+1)/(B+1)$, where $k$ of $B=1{,}000$ control
 draws match or exceed the candidate statistic. Rank stability across
@@ -340,7 +346,10 @@ with 24~GB unified memory and no GPU (peak resident memory 1.94~GiB),
 57.62~s for DistilGPT2, and 428.56~s for GPT-2 at $N=500$ (3.22~GiB).
 Each of the three configurations was then rerun independently; all three
 reproduced their saved result files exactly, byte for byte, apart from
-the recorded timestamp. The camera-ready partition and sequence-control
+the recorded timestamp. A fresh clone of the public repository gives the
+same: its tests pass, its GPT-2 and DistilGPT2 reruns match the saved
+files apart from the timestamp and Git commit, and its figure script
+regenerates both figures byte for byte. The camera-ready partition and sequence-control
 analyses (\texttt{scripts/run\_camera\_ready\_robustness.py}) took
 301.43~s (1.90~GiB) for GPT-2 and 82.08~s (1.63~GiB) for DistilGPT2,
 and the copying resample analysis
@@ -377,7 +386,8 @@ used (Section~\ref{sec:background}), not one constructed to fail.
 \label{sec:rq1}
 
 GPT-2 small is at a behavioral floor on the arithmetic control task
-(0.0\% teacher-forced exact match, 95\% CI $[0.0\%, 0.0\%]$, $N=200$)
+(0.0\% teacher-forced exact match, 0 of 200 examples; exact 95\% CI
+$[0.0\%, 1.8\%]$)
 and near a behavioral ceiling on the controlled induction-style
 copying task (99.5\%, CI $[98.5\%,100.0\%]$). At the floor, binary
 accuracy cannot detect further degradation. Near the ceiling, it can
@@ -485,7 +495,7 @@ independent replications.
     Quantity & Value & Interval & $N$ / draws \\
     \midrule
     Copying-task accuracy (ceiling) & 0.995 & [0.985, 1.000] & 200 \\
-    Arithmetic accuracy (floor) & 0.000 & [0.000, 0.000] & 200 \\
+    Arithmetic accuracy (floor) & 0.000 & [0.000, 0.018]$^\ddagger$ & 200 \\
     Copying-task log-prob (nats) & $-0.83$ & [$-0.90$, $-0.76$] & 200 \\
     Arithmetic log-prob (nats) & $-7.44$ & [$-7.53$, $-7.35$] & 200 \\
     Candidate $\Delta$, held-out & 0.412 & [0.353, 0.474] & 100 \\
@@ -501,6 +511,7 @@ independent replications.
   \raggedright \footnotesize Monte Carlo $p$(candidate $\geq$ random control, held-out $\Delta$) $=0.001$; \quad
   $p$(candidate $\geq$ layer-matched, held-out $\Delta$) $=0.001$; \quad
   $p$(candidate $\geq$ random control, specificity) $=0.078$. $^\dagger$5th--95th percentile.
+  $^\ddagger$Exact (Clopper--Pearson) 95\% interval for 0/200; the bootstrap is degenerate at $[0, 0]$.
 \end{table}
 
 \begin{figure}[t]
@@ -527,8 +538,8 @@ independent replications.
 Zero is a value a head's output may never take, so the RQ2 effect could
 reflect that distribution shift rather than the removal of a
 computation. After obtaining the primary results, we therefore reran the
-RQ2 pipeline with two replacement values that stay on the model's
-activation distribution (Section~\ref{sec:design}): the head's mean output
+RQ2 pipeline with two alternative replacement values
+(Section~\ref{sec:design}): the head's mean output
 (\emph{mean-ablation}) and its output on another copying example
 (\emph{resample-ablation}, specified in writing before it was run). Data,
 splits, selection rule, controls, seeds, and statistics are unchanged
@@ -561,7 +572,7 @@ then 0.020 nats (CI $[0.006,0.035]$), no larger than that of random head
 sets (mean 0.015, $p=0.346$) or layer-matched sets ($p=0.430$), and it
 is 0.005 and 0.011 nats with two other random choices of source
 examples. On GPT-2, the RQ2 effect of these heads is therefore
-consistent with replacing their output by an off-distribution value, not
+consistent with an artifact of replacing their output by zero, not
 with removing information the copying task needs.
 
 \textbf{How much the baseline matters depends on the model.} On
@@ -648,7 +659,7 @@ shares only 2 of its top-5 heads with mean or with resample, whereas
 mean and resample share 4 of 5 (Spearman $\rho$ over all 144 heads:
 zero vs.\ mean $0.74$, zero vs.\ resample $0.47$, mean vs.\ resample
 $0.65$). Zero-ablation selects three layer-0/1 heads that neither
-on-distribution baseline selects, and its held-out effect is 68\% larger
+mean nor resample ablation selects, and its held-out effect is 68\% larger
 (1.55 vs.\ 0.92 and 0.93). Under every baseline the top-5 includes the
 S-inhibition heads 8.6 and 8.10 reported by
 \citet{wang2023interpretability}, and their head 7.9 is in the top-5
@@ -710,11 +721,12 @@ hook selected disjoint heads; accuracy hid information at the floor and
 near the ceiling; the specificity contrast blocked a task-specificity
 claim that the larger GPT-2 run does not support; and the replacement
 value changed which heads were selected and, for GPT-2, removed the
-selected heads' effect under both on-distribution baselines. A single-head ablation report should therefore
+selected heads' effect under both alternative baselines. A single-head ablation report should therefore
 state the intervention point with a test that it isolates one head, use
 a continuous metric beside accuracy, select on held-out-separated data
 against matched controls, and report the replacement value together with
-at least one on-distribution baseline.
+at least one alternative, preferably resample-ablation, which uses
+activations the model actually produces.
 
 
 \section{Conclusion}
@@ -779,7 +791,7 @@ Table~\ref{tab:distilgpt2}.
     Quantity & Value & Interval & $N$ / draws \\
     \midrule
     Copying-task accuracy & 0.900 & [0.855, 0.940] & 200 \\
-    Arithmetic accuracy (floor) & 0.000 & [0.000, 0.000] & 200 \\
+    Arithmetic accuracy (floor) & 0.000 & [0.000, 0.018]$^\ddagger$ & 200 \\
     Copying-task log-prob (nats) & $-0.96$ & [$-1.07$, $-0.85$] & 200 \\
     Arithmetic log-prob (nats) & $-7.38$ & [$-7.50$, $-7.25$] & 200 \\
     RQ0: Pearson $r$(naive, correct) & 0.001 & -- & 72 heads \\
@@ -797,6 +809,7 @@ Table~\ref{tab:distilgpt2}.
   \raggedright \footnotesize Monte Carlo $p$(candidate $\geq$ random control, held-out $\Delta$) $=0.001$; \quad
   $p$(candidate $\geq$ layer-matched, held-out $\Delta$) $=0.001$; \quad
   $p$(candidate $\geq$ random control, specificity) $=0.001$. $^\dagger$5th--95th percentile.
+  $^\ddagger$Exact (Clopper--Pearson) 95\% interval for 0/200.
 \end{table}
 
 The candidate heads found on DistilGPT2 (Layer~0 Heads~1, 7, 9;
@@ -836,7 +849,8 @@ when the answer is written without its leading space
 \begin{table}[h]
   \caption{Qwen2.5-1.5B-Instruct ($N=200$ per task, 336 heads). Intervals
   are 95\% percentile-bootstrap CIs over examples; $^\dagger$5th--95th
-  percentile of 1{,}000 control draws.}
+  percentile of 1{,}000 control draws; $^\ddagger$exact (Clopper--Pearson)
+  interval for 0/200.}
   \label{tab:qwen}
   \centering
   \small
@@ -848,7 +862,7 @@ when the answer is written without its leading space
     Quantity & Value & Interval & Value & Interval \\
     \midrule
     Copying-task accuracy & 0.990 & [0.975, 1.000] & & \\
-    Arithmetic accuracy & 0.000 & [0.000, 0.000] & & \\
+    Arithmetic accuracy & 0.000 & [0.000, 0.018]$^\ddagger$ & & \\
     Copying-task log-prob (nats) & $-0.38$ & [$-0.43$, $-0.34$] & & \\
     Arithmetic log-prob (nats) & $-5.31$ & [$-5.44$, $-5.17$] & & \\
     RQ0: $r$ / $\rho$ (naive vs.\ correct) & 0.108 / 0.176 & -- & & \\

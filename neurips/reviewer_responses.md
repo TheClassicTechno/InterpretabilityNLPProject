@@ -13,7 +13,7 @@ separates reselected heads from both matched controls (p = 0.001), but on GPT-2 
 zero-ablation set, and the five zero-selected heads' held-out effect falls from 0.412 to 0.005 nats (post hoc). Their zero-ablation
 effect is therefore consistent with an off-distribution replacement rather than the removal of information the task needs. We
 revised the abstract, introduction, discussion, and conclusion accordingly and added a fourth recommendation: report the
-replacement value and check at least one on-distribution baseline. We then tested whether the mean itself was the problem, with a
+replacement value and check it against at least one alternative, preferably resampled activations. We then tested whether the mean itself was the problem, with a
 resample-ablation analysis specified before it was run: each head's output is replaced by its output on another copying example
 with the same token layout (§4.4, Table 2). On GPT-2 the zero-selected heads' held-out effect is 0.020 nats (p = 0.346 against
 random head sets; 0.005 and 0.011 with two other source assignments), so resample agrees with mean. On DistilGPT2 resample selects
