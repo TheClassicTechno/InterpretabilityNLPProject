@@ -1,0 +1,59 @@
+{
+  "note": "exact Clopper-Pearson 95% intervals for arithmetic exact match; computed from saved baselines, no forward passes",
+  "gpt2": {
+    "source": "gpt2_results.json",
+    "n": 200,
+    "k_correct": 0,
+    "accuracy": 0.0,
+    "bootstrap_ci95_saved": [
+      0.0,
+      0.0
+    ],
+    "clopper_pearson_ci95": [
+      0.0,
+      0.018275340355136283
+    ]
+  },
+  "distilgpt2": {
+    "source": "distilgpt2_results.json",
+    "n": 200,
+    "k_correct": 0,
+    "accuracy": 0.0,
+    "bootstrap_ci95_saved": [
+      0.0,
+      0.0
+    ],
+    "clopper_pearson_ci95": [
+      0.0,
+      0.018275340355136283
+    ]
+  },
+  "gpt2_n500": {
+    "source": "gpt2_n500_results.json",
+    "n": 500,
+    "k_correct": 0,
+    "accuracy": 0.0,
+    "bootstrap_ci95_saved": [
+      0.0,
+      0.0
+    ],
+    "clopper_pearson_ci95": [
+      0.0,
+      0.007350610051907791
+    ]
+  },
+  "qwen2.5-1.5b-instruct": {
+    "source": "qwen2.5-1.5b-instruct_meanablation_results.json",
+    "n": 200,
+    "k_correct": 0,
+    "accuracy": 0.0,
+    "bootstrap_ci95_saved": [
+      0.0,
+      0.0
+    ],
+    "clopper_pearson_ci95": [
+      0.0,
+      0.018275340355136283
+    ]
+  }
+}

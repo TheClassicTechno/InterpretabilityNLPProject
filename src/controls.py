@@ -8,6 +8,7 @@ already-computed per-head effect vectors (see
 are essentially free to build.
 """
 
+import math
 import random
 from typing import Dict, List, Tuple
 
@@ -28,6 +29,34 @@ def bootstrap_mean_ci(
         boot_means[i] = values[idx].mean()
     lo, hi = np.percentile(boot_means, [100 * alpha / 2, 100 * (1 - alpha / 2)])
     return float(values.mean()), float(lo), float(hi)
+
+
+def _binom_cdf(k: int, n: int, p: float) -> float:
+    """P(X <= k) for X ~ Binomial(n, p)."""
+    return sum(math.comb(n, i) * p**i * (1 - p) ** (n - i) for i in range(k + 1))
+
+
+def clopper_pearson_ci(k: int, n: int, alpha: float = 0.05) -> Tuple[float, float]:
+    """Exact (Clopper-Pearson) two-sided CI for a binomial proportion with
+    k successes in n trials. Unlike a percentile bootstrap, it does not
+    collapse to [0, 0] when k = 0 (or [1, 1] when k = n)."""
+    if not 0 <= k <= n or n == 0:
+        raise ValueError(f"need 0 <= k <= n and n > 0, got k={k}, n={n}")
+
+    def solve(f, target):
+        # f is monotone decreasing in p on [0, 1]; find f(p) = target.
+        lo, hi = 0.0, 1.0
+        for _ in range(200):
+            mid = (lo + hi) / 2
+            if f(mid) > target:
+                lo = mid
+            else:
+                hi = mid
+        return (lo + hi) / 2
+
+    lower = 0.0 if k == 0 else solve(lambda q: -(1 - _binom_cdf(k - 1, n, q)), -alpha / 2)
+    upper = 1.0 if k == n else solve(lambda q: _binom_cdf(k, n, q), alpha / 2)
+    return lower, upper
 
 
 def sample_random_head_sets(

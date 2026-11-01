@@ -1,7 +1,11 @@
 import unittest
 from collections import Counter
 
-from src.controls import empirical_percentile, sample_layer_matched_head_sets
+from src.controls import (
+    clopper_pearson_ci,
+    empirical_percentile,
+    sample_layer_matched_head_sets,
+)
 
 # Three candidates share layer 0, which is what makes naive per-candidate
 # sampling degenerate.
@@ -55,3 +59,24 @@ class EmpiricalPercentileTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClopperPearsonTests(unittest.TestCase):
+    """The exact binomial interval used for accuracy floors."""
+
+    def test_zero_successes_matches_closed_form(self):
+        for n in (200, 500):
+            lo, hi = clopper_pearson_ci(0, n)
+            self.assertEqual(lo, 0.0)
+            self.assertAlmostEqual(hi, 1 - 0.025 ** (1 / n), places=10)
+
+    def test_all_successes_is_mirror_of_zero(self):
+        lo, hi = clopper_pearson_ci(200, 200)
+        self.assertAlmostEqual(lo, 0.025 ** (1 / 200), places=10)
+        self.assertEqual(hi, 1.0)
+
+    def test_interior_matches_reference_value(self):
+        # 5/10: the textbook exact interval is [0.1871, 0.8129].
+        lo, hi = clopper_pearson_ci(5, 10)
+        self.assertAlmostEqual(lo, 0.18709, places=4)
+        self.assertAlmostEqual(hi, 0.81291, places=4)
