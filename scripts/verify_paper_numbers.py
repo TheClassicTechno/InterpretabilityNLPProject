@@ -201,6 +201,16 @@ assert 0.29 < dr / dz < 0.37, "'about a third' must hold for DistilGPT2 resample
 assert drs["r2_resample_selected"]["overlap_with_mean_selected"] == 5
 add("distil c3 p", f"($p={p3(drs['r1_zero_selected_under_resample']['random_control']['empirical_p'])}$)")
 
+# Exact binomial intervals for the 0/200 arithmetic floors (Tables 1, 3, 4; Sec. 4.2).
+bf = load(RES / "binomial_floor_intervals.json")
+for name in ("gpt2", "distilgpt2", "qwen2.5-1.5b-instruct"):
+    assert bf[name]["k_correct"] == 0 and bf[name]["n"] == 200
+hi = bf["gpt2"]["clopper_pearson_ci95"][1]
+assert all(bf[m]["clopper_pearson_ci95"][1] == hi for m in ("distilgpt2", "qwen2.5-1.5b-instruct"))
+assert TEX.count(f"[0.000, {f3(hi)}]$^\\ddagger$") == 3, "floor interval must appear in Tables 1, 3, 4"
+add("floor exact CI text", f"$[0.0\\%, {100 * hi:.1f}\\%]$")
+add("floor exact CI table", f"[0.000, {f3(hi)}]$^\\ddagger$")
+
 failed = [(lab, s) for lab, s in checks if s not in TEX]
 for lab, s in failed:
     print(f"MISSING  {lab}: {s!r}")

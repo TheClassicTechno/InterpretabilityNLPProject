@@ -271,3 +271,27 @@ source seeds on both models. After the run: `pytest tests/` 33 passed; `scripts/
 | `tests/test_resample_ablation.py` | `e54aa9232cba9e57aecbbf1d02b772bb909703781fd6d25c9754a234bbae29b1` |
 | `scripts/verify_paper_numbers.py` (adds C3 checks) | `e34dab97bb4c9ced2e00fce9edafbd3d953174c929a24a4a48fbc04d0d469ccb` |
 | `scripts/verify_paper_numbers.py` (current; updated for the restructured Sec. 4.4, 142 checks) | `d759432540a24077027bbf6b1878aecfc5e1fa17fb785c9e3b6c3acba5c0381d` |
+
+## Camera-ready round 2 (added 2026-11-01)
+
+Fresh-clone check of the public repository (`git clone https://github.com/TheClassicTechno/InterpretabilityNLPProject`,
+commit `7776156`), same machine and environment:
+
+- Every file named in the paper (App. F, checklist) and the README exists in the clone (47 names checked).
+- `python -m unittest discover -s tests`: 33 tests pass.
+- `scripts/run_neurips_experiments.py --model gpt2` (default N=200 configuration; 219.87 s wall) and `--model distilgpt2`:
+  each output equals the saved `gpt2_results.json` / `distilgpt2_results.json` exactly after removing
+  `config.timestamp_utc` and `config.git_commit` (`jq -S` then `diff`: no differences).
+- `scripts/make_figures.py`: `main_figure.png` and `rq0_naive_vs_correct.png` are byte-identical to the committed files.
+  The vector PDF copies differ only because matplotlib embeds a creation date; the paper uses the PNGs.
+
+Exact binomial intervals for the 0/N arithmetic floors (post hoc, no forward passes):
+`python scripts/binomial_floor_intervals.py` writes `binomial_floor_intervals.json`. 0/200 gives a Clopper-Pearson 95% interval
+of [0, 0.01828] (GPT-2, DistilGPT2, Qwen2.5); 0/500 gives [0, 0.00735].
+
+| File | SHA-256 |
+|---|---|
+| `binomial_floor_intervals.json` | `7ec9c9b6645deb5ccb449d2484700ab7adbea7491d53a1a677fa9438fa6c135e` |
+| `scripts/binomial_floor_intervals.py` | `6fc47807aa44b9ec8da05615032f6ba6fc9c3be85bc8b77595063ba84e14ebba` |
+| `src/controls.py` (adds `clopper_pearson_ci`) | `1a3633dca36f627674b6d0ecd526a20608abfa93ddb8369d8b91ada982607938` |
+| `scripts/verify_paper_numbers.py` (144 checks) | `bb4a33d6bc75b0fba7ff83e1360af5c4d6b07a9b712037523b7bd788dfd510d0` |

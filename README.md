@@ -86,7 +86,7 @@ Exact model revisions and weight hashes are in
 python -m unittest discover -s tests -v
 ```
 
-All 33 tests should pass in a few seconds, with no model download. They
+All 36 tests should pass in a few seconds, with no model download. They
 check that the corrected pre-hook zeroes exactly one head's slice of the
 output-projection input and nothing else, that removing the hook restores
 the unablated output, that the naive hook changes the logits while leaving
@@ -96,7 +96,8 @@ tests also check that the resample hook replaces only the target head's
 slice, that resample sources share the target's token layout and split and
 are never the target itself, that the IOI prompts align, and that the
 sequence-continuation control matches the copying template without
-revealing its answer.
+revealing its answer, and that the exact binomial interval matches its
+closed forms.
 
 ## Reproduce each reported run
 
@@ -186,6 +187,14 @@ python scripts/run_resample_copying.py --model gpt2 \
   --output neurips/experiment_results/reproduced_gpt2_resample_copying.json
 python scripts/run_resample_copying.py --model distilgpt2 \
   --output neurips/experiment_results/reproduced_distilgpt2_resample_copying.json
+```
+
+Exact binomial intervals for the 0/200 arithmetic accuracy floors (post hoc,
+no forward passes; Section 4.2 and Tables 1, 3, 4):
+
+```bash
+python scripts/binomial_floor_intervals.py \
+  --output neurips/experiment_results/reproduced_binomial_floor_intervals.json
 ```
 
 Check every value printed in the paper against the saved result files:

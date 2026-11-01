@@ -145,7 +145,7 @@ Every value is copied from rows already traced above. Hook placement: r = 0.057 
 
 ## Camera-ready workshop version (`neurips/neurips_2026.tex`, 2026-10-30)
 
-All numbers are checked mechanically by `scripts/verify_paper_numbers.py` (142/142 passed at build).
+All numbers are checked mechanically by `scripts/verify_paper_numbers.py` (144/144 passed at build).
 Workshop locations of results that already have rows above: mean-ablation → §4.4 + Table 2 (`tab:mean`);
 Qwen2.5 → §4.1, §4.2, §4.4, App. C + Table 4 (`tab:qwen`); IOI → §4.5 + App. D + Table 5 (`tab:ioi`).
 
@@ -173,3 +173,7 @@ Qwen2.5 → §4.1, §4.2, §4.4, App. C + Table 4 (`tab:qwen`); IOI → §4.5 + 
 | C3 resample-selected heads vs controls | `primary.r2_resample_selected.{heads,heldout_delta_mean,heldout_delta_ci95,random_control,layer_matched_control,overlap_with_zero_selected,overlap_with_mean_selected}` | GPT-2 10.0, 10.11, 10.1, 10.6, 11.2: 0.179 [0.159, 0.200], p=0.001/0.001, overlap 0/5 zero, 2/5 mean; DistilGPT2 0.586 [0.516, 0.659], 1/5 zero, 5/5 mean | §4.4, Table 2 |
 | C3 per-head agreement (discovery-split Pearson, resample N=99) | `primary.r3_agreement.discovery_resample_vs_{zero,mean}.pearson`; zero–mean from `<model>_meanablation_results.json` `mean_ablation.mean_vs_zero.pearson_r_discovery` | GPT-2 resample–zero 0.212, resample–mean 0.724, zero–mean 0.424; DistilGPT2 0.473 / 0.946 / 0.553 (held-out, also saved: GPT-2 0.279 / 0.716; DistilGPT2 0.452 / 0.940) | §4.4, Table 2 |
 | C3 run cost | `/usr/bin/time -l` (see provenance) | GPT-2 914.99 s, 2.14 GiB; DistilGPT2 325.98 s, 2.10 GiB | §3 |
+
+| Claim (round 2) | Source |
+|---|---|
+| Arithmetic floor 0/200, exact 95% CI [0.0%, 1.8%] / [0.000, 0.018] (Sec. 4.2; Tables 1, 3, 4) | `binomial_floor_intervals.json` → `{gpt2,distilgpt2,qwen2.5-1.5b-instruct}.clopper_pearson_ci95` (from each file's `baselines.arithmetic_control`) |
