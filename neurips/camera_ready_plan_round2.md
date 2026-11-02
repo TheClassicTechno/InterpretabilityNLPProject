@@ -28,3 +28,5 @@ Rules carried over from round 1: no new claim without a result file; original re
 - [x] R3 fresh clone at `7776156`: 47/47 named files present, 33/33 tests, GPT-2 and DistilGPT2 reruns identical to saved files
   (ignoring timestamp, Git commit), both PNG figures byte-identical. Sec. 1 and Sec. 3 now state exactly this.
 - [x] R4 workshop call requires NeurIPS format only; checklist allowed and outside the page limit; footer correct; main text ends p. 9.
+- [x] R5 (second audit) Markdown corruption: not present in the real sources or the Overleaf zip (the audited copy was a converted .md); no change needed.
+- [x] R6 (second audit) softened the RQ3 interpretation: the GPT-2 effect "depends on the replacement value" and is "not baseline-independent evidence that the copying task needs them"; same in Sec. 5 and the reviewer responses.

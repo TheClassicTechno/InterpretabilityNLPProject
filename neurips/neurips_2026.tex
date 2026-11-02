@@ -571,9 +571,10 @@ heads with replacements the heads actually produce. Their effect is
 then 0.020 nats (CI $[0.006,0.035]$), no larger than that of random head
 sets (mean 0.015, $p=0.346$) or layer-matched sets ($p=0.430$), and it
 is 0.005 and 0.011 nats with two other random choices of source
-examples. On GPT-2, the RQ2 effect of these heads is therefore
-consistent with an artifact of replacing their output by zero, not
-with removing information the copying task needs.
+examples. On GPT-2, the large RQ2 effect of these heads therefore
+depends on the replacement value. It is not baseline-independent
+evidence that the copying task needs them, although these tests cannot
+rule out that it does.
 
 \textbf{How much the baseline matters depends on the model.} On
 DistilGPT2, resample-ablation selects exactly the mean-ablation
@@ -720,8 +721,8 @@ control has 129 examples, 92 of them numerals.
 hook selected disjoint heads; accuracy hid information at the floor and
 near the ceiling; the specificity contrast blocked a task-specificity
 claim that the larger GPT-2 run does not support; and the replacement
-value changed which heads were selected and, for GPT-2, removed the
-selected heads' effect under both alternative baselines. A single-head ablation report should therefore
+value changed which heads were selected, and for GPT-2 the selected
+heads' effect did not persist under either alternative baseline. A single-head ablation report should therefore
 state the intervention point with a test that it isolates one head, use
 a continuous metric beside accuracy, select on held-out-separated data
 against matched controls, and report the replacement value together with

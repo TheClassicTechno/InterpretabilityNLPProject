@@ -11,7 +11,7 @@ Thank you for the careful and constructive review, and for your comments on the 
 The reference means come from the discovery split only. Your concern was warranted. Under mean-ablation the protocol still
 separates reselected heads from both matched controls (p = 0.001), but on GPT-2 the selected heads are disjoint from the
 zero-ablation set, and the five zero-selected heads' held-out effect falls from 0.412 to 0.005 nats (post hoc). Their zero-ablation
-effect is therefore consistent with an off-distribution replacement rather than the removal of information the task needs. We
+effect therefore depends on the replacement value: it is not baseline-independent evidence that the task needs these heads. We
 revised the abstract, introduction, discussion, and conclusion accordingly and added a fourth recommendation: report the
 replacement value and check it against at least one alternative, preferably resampled activations. We then tested whether the mean itself was the problem, with a
 resample-ablation analysis specified before it was run: each head's output is replaced by its output on another copying example
