@@ -120,8 +120,9 @@ drop but may hide confidence changes that leave the predicted token
 unchanged. Teacher-forced log-probability of the gold continuation
 remains graded in both regimes.
 
-\textbf{(3, RQ2) With proper controls, five heads show a held-out-replicated
-intervention effect that exceeds random and layer-matched baselines, but
+\textbf{(3, RQ2) With proper controls, five heads show an
+intervention effect that generalizes to held-out data and exceeds random
+and layer-matched baselines, but
 their task specificity is not established on GPT-2.} The per-head
 ranking is stable across splits (Spearman $\rho=0.974$ over all 144
 heads), and the top-5 discovery-selected heads' mean held-out effect
@@ -426,8 +427,9 @@ $[-0.033,0.113]$; Monte Carlo $p=0.001$,
 0/1{,}000 draws matched or exceeded the candidates) and the
 layer-matched control distribution (mean $0.051$, 5th--95th percentile
 range $[0.001,0.098]$;
-Monte Carlo $p=0.001$; Figure~\ref{fig:main}B). This establishes a held-out-replicated
-intervention effect on the controlled copying task that exceeds what an arbitrary
+Monte Carlo $p=0.001$; Figure~\ref{fig:main}B). This establishes an
+intervention effect on the controlled copying task that generalizes to
+held-out data and exceeds what an arbitrary
 head, or an arbitrary head from the same layers, would produce. Whether
 that effect is specific to the copying task requires the separate contrast below.
 
@@ -673,8 +675,8 @@ under mean and resample (Appendix~\ref{app:ioi}).
 ``compute induction'' in a mechanistic sense. Using the causal-claim
 ladder (correlation $<$ decodability $<$ intervention effect $<$
 specific causal contribution $<$ mechanistic role), our evidence
-supports a held-out-replicated intervention effect that exceeds matched
-controls (the third rung), but only relative to a stated replacement
+supports an intervention effect that generalizes to held-out data and
+exceeds matched controls (the third rung), but only relative to a stated replacement
 value. The zero-selected GPT-2 heads reach this rung under zero-ablation
 and not under mean- or resample-ablation. The Qwen2.5 heads reach it under both. No
 GPT-2 specificity contrast supports the fourth rung. A mechanistic
@@ -724,8 +726,8 @@ claim that the larger GPT-2 run does not support; and the replacement
 value changed which heads were selected, and for GPT-2 the selected
 heads' effect did not persist under either alternative baseline. A single-head ablation report should therefore
 state the intervention point with a test that it isolates one head, use
-a continuous metric beside accuracy, select on held-out-separated data
-against matched controls, and report the replacement value together with
+a continuous metric beside accuracy, select heads on one split and test them
+against matched controls on another, and report the replacement value together with
 at least one alternative, preferably resample-ablation, which uses
 activations the model actually produces.
 
@@ -818,8 +820,8 @@ Layer~3 Head~2; Layer~5 Head~0) are, as expected, different indices
 from GPT-2 small's. The two models are different parameter sets, so
 this is not evidence the same head performs the same role across
 models, only that the same \emph{protocol} (discovery/held-out
-selection against matched controls) again separates a real,
-held-out-replicated effect from the control distributions. We report
+selection against matched controls) again separates a real effect
+that generalizes to held-out data from the control distributions. We report
 this as a second data point for the paper's methodological claim, not
 as evidence about a shared or universal ``induction circuit'' across
 GPT-2 and DistilGPT2. DistilGPT2 is distilled from GPT-2, so it is not
